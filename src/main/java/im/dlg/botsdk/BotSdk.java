@@ -11,7 +11,6 @@ import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -50,6 +49,7 @@ public class BotSdk {
                 Metadata.Key<String> key = Metadata.Key.of("x-auth-ticket", Metadata.ASCII_STRING_MARSHALLER);
                 header.put(key, res.getToken());
                 meta.complete(header);
+                System.out.println("Bot registered with token = " + res.getToken());
             } else if (t != null) {
                 meta.completeExceptionally(t);
             }
@@ -62,7 +62,7 @@ public class BotSdk {
                                         .setApiKey("BotSdk")
                                         .setAppId(appId)
                                         .setDeviceTitle(deviceTitle)
-                                        .setPreferredLanguages(0, "RU")
+                                        .addPreferredLanguages("RU")
                                         .setTimeZone(StringValue.newBuilder().setValue("+3").build())
                                         .setToken(bot.getRegistrationToken())
                                         .build()
@@ -79,6 +79,8 @@ public class BotSdk {
                         return new Object();
                     }
             );
+
+            System.out.println("Bot authorized with id = " + p.getLeft().getId());
 
             return activeBot;
         });

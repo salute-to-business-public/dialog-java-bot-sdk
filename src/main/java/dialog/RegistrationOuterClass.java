@@ -2328,7 +2328,7 @@ public final class RegistrationOuterClass {
       "og.RegisterDeprecatedDeviceRequest\032\035.dia",
       "log.ResponseDeviceRequest\"9\202\323\344\223\0023\"./v1/g" +
       "rpc/Registration/RegisterDeprecatedDevic" +
-      "e:\001*b\006proto3"
+      "e:\001*B\031\342?\026\n\024im.dlg.grpc.servicesb\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -2372,6 +2372,7 @@ public final class RegistrationOuterClass {
         com.google.protobuf.ExtensionRegistry.newInstance();
     registry.add(com.google.api.AnnotationsProto.http);
     registry.add(com.trueaccord.scalapb.Scalapb.message);
+    registry.add(com.trueaccord.scalapb.Scalapb.options);
     com.google.protobuf.Descriptors.FileDescriptor
         .internalUpdateFileDescriptor(descriptor, registry);
     com.trueaccord.scalapb.Scalapb.getDescriptor();
