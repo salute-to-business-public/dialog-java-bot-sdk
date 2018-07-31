@@ -4,6 +4,7 @@ import dialog.Peers;
 import dialog.UsersOuterClass;
 
 public class User {
+
     public enum Sex {
         MALE, FEMALE;
 
@@ -24,6 +25,7 @@ public class User {
         this.name = name;
         this.nick = nick;
         this.about = about;
+        this.sex = sex;
         this.language = language;
         this.timeZone = timeZone;
     }
@@ -42,6 +44,10 @@ public class User {
 
     public String getAbout() {
         return about;
+    }
+
+    public Sex getSex() {
+        return sex;
     }
 
     public String getLanguage() {

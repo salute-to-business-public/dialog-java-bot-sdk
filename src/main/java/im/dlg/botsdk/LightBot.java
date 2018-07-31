@@ -13,37 +13,28 @@ import io.grpc.stub.MetadataUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 
 public class LightBot {
 
-////
     private static Integer appId = 11011;
 
     private Config config;
     private DialogExecutor executor;
     private ManagedChannel channel;
-////
 
-    private ExecutorService executorService = Executors.newFixedThreadPool(4);
     private String token;
-    private String name;
 
-    private volatile boolean isInited = false;
+    private volatile boolean isInitialised = false;
+
     private final Object initLock = new Object();
-
-//    private Runnable onMessage;
-
+    private final Object stopLock = new Object();
 
     private ActiveBot activeBot;
     private Messaging messaging;
 
-
-    public LightBot(String token, String name) {
+    public LightBot(String token) {
         this.token = token;
-        this.name = name;
 
         this.config = ConfigFactory.load().getConfig("dialog.botsdk");
         this.executor = new DialogExecutor(config.getInt("fork-join-pool.parallelism"));
@@ -51,7 +42,7 @@ public class LightBot {
                 .forAddress(config.getString("host"), config.getInt("port"))
                 .usePlaintext()
                 .build();
-        }
+    }
 
     public CompletableFuture<Void> start() {
 
@@ -77,7 +68,6 @@ public class LightBot {
                 // start internal apis
                 activeBot = new ActiveBot(header, executor, channel);
                 messaging = new Messaging(activeBot);
-                //////
 
 
                 meta.complete(header);
@@ -118,20 +108,28 @@ public class LightBot {
         });
     }
 
-//    public void stop() {
-//
-//    }
+    public void await() throws InterruptedException {
+        synchronized (stopLock) {
+            stopLock.wait();
+        }
+    }
+
+    public void stop() {
+        synchronized (stopLock) {
+            stopLock.notifyAll();
+        }
+    }
 
     private void notifyInit() {
         synchronized (initLock) {
-            isInited = true;
+            isInitialised = true;
             initLock.notifyAll();
         }
     }
 
     private void waitForInit() {
         synchronized (initLock) {
-            while (!isInited) {
+            while (!isInitialised) {
                 try {
                     initLock.wait();
                 } catch (InterruptedException e) {

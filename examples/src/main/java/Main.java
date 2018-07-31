@@ -1,28 +1,21 @@
-import im.dlg.botsdk.*;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import im.dlg.botsdk.LightBot;
 
 public class Main {
-    public static void main(String[] args) {
-        BotSdk sdk = new BotSdk();
 
-        sdk.start(new MyBot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8")).thenComposeAsync(bot -> {
-            System.out.println("My bot name is " + bot.getName());
-            System.out.println("My bot nick is " + bot.getNick());
-            System.out.println("My bot about is " + bot.getAbout());
+    public static void main(String[] args) throws InterruptedException {
 
-            return bot.profile().editName("My superbot")
-                    .thenComposeAsync(x -> bot.profile().editNickname("Superbot"))
-                    .thenComposeAsync(x -> bot.profile().editAbout("Best bot in the world!"));
-        }).whenCompleteAsync((r, t) -> {
-            if (t != null) System.out.println("ERROR: " + t.getMessage());
+        LightBot bot = new LightBot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8");
+        bot.start();
+
+
+        bot.messaging().onMessage((message) -> {
+            System.out.println("Got a message: " + message.getText());
+
+            // Sending reply
+            bot.messaging().send(message.getPeer(), "Reply to : " + message.getText());
         });
 
-        try {
-            new CompletableFuture<Void>().get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
+
+        bot.await();
     }
 }

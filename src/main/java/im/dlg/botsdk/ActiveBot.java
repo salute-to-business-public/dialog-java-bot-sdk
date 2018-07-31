@@ -3,20 +3,18 @@ package im.dlg.botsdk;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.InvalidProtocolBufferException;
-import dialog.*;
-import im.dlg.botsdk.domain.Message;
-import im.dlg.botsdk.light.UpdateListener;
-import io.grpc.Metadata;
-import io.grpc.stub.AbstractStub;
-import io.grpc.stub.MetadataUtils;
 import dialog.MessagingGrpc;
 import dialog.MessagingOuterClass;
 import dialog.MessagingOuterClass.*;
 import dialog.Peers;
+import dialog.SequenceAndUpdatesOuterClass;
 import im.dlg.botsdk.domain.Message;
+import im.dlg.botsdk.light.UpdateListener;
 import io.grpc.ManagedChannel;
+import io.grpc.Metadata;
+import io.grpc.stub.AbstractStub;
+import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
-
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -25,16 +23,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
-//    private BotSdk sdk;
+
     private Metadata meta;
     private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     volatile private String name;
     volatile private String nick;
     volatile private String about = "";
 
-
-    private DialogExecutor executor;
-    private ManagedChannel channel;
+    DialogExecutor executor;
+    ManagedChannel channel;
 
     private Map<Integer, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
@@ -126,7 +123,7 @@ public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.Se
             }
 
             return messages;
-        }, executor);
+        }, executor.getExecutor());
     }
 
     CompletableFuture<List<Dialog>> loadDialogs(Set<Peers.Peer> peers) {
@@ -144,23 +141,8 @@ public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.Se
             res.getUserPeersList().forEach(this::putOutPeer);
 
             return res.getDialogsList();
-        }, executor);
+        }, executor.getExecutor());
     }
-
-//    // handlers
-//    public MessagingHandlers messaging() {
-//        return messagingHandlers;
-//    }
-//
-//    public ProfileHandlers profile() {
-//        return profileHandlers;
-//    }
-//
-//    public UserHandlers users() {
-//        return userHandlers;
-//    }
-
-    // -- handlers
 
     public String getName() {
         return name;

@@ -11,6 +11,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+//TODO: remove
 public class MessagingHandlers {
     private ActiveBot bot;
     private ManagedChannel channel;

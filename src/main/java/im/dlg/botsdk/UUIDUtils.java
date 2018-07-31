@@ -2,21 +2,24 @@ package im.dlg.botsdk;
 
 import dialog.Definitions;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.TimeZone;
+import java.util.UUID;
 
 public class UUIDUtils {
     public static class BotSdkInvalidArgumentException extends RuntimeException {
         public BotSdkInvalidArgumentException(String message) {
             super(message);
         }
-    };
+    }
 
     static UUID convert(Definitions.UUIDValue value) {
         byte[] bytes = value.getValue().toByteArray();
         if (bytes.length == 16) {
             return new UUID(
-                    longFromBytes(Arrays.copyOfRange(bytes, 0, 7)),
-                    longFromBytes(Arrays.copyOfRange(bytes, 8, 15))
+                    longFromBytes(Arrays.copyOfRange(bytes, 0, 8)),
+                    longFromBytes(Arrays.copyOfRange(bytes, 8, 16))
             );
         } else {
             throw new BotSdkInvalidArgumentException("Can't convert value to UUID");
@@ -57,6 +60,7 @@ public class UUIDUtils {
     }
 
     private static final long START_EPOCH = makeEpoch();
+
     private static long makeEpoch() {
         // UUID v1 timestamp must be in 100-nanoseconds interval since 00:00:00.000 15 Oct 1582.
         Calendar c = Calendar.getInstance(TimeZone.getTimeZone("GMT-0"));
@@ -69,6 +73,7 @@ public class UUIDUtils {
         c.set(Calendar.MILLISECOND, 0);
         return c.getTimeInMillis();
     }
+
     public static long unixTimestamp(UUID uuid) {
         if (uuid.version() != 1)
             throw new IllegalArgumentException(String.format("Can only retrieve the unix timestamp for version 1 uuid (provided version %d)", uuid.version()));
