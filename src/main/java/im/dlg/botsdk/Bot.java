@@ -15,7 +15,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public class LightBot {
+public class Bot {
 
     private static Integer appId = 11011;
 
@@ -30,10 +30,11 @@ public class LightBot {
     private final Object initLock = new Object();
     private final Object stopLock = new Object();
 
-    private ActiveBot activeBot;
-    private Messaging messaging;
+    private InternalBotApi internalBotApi;
+    private MessagingApi messagingApi;
+    private UsersApi users;
 
-    public LightBot(String token) {
+    public Bot(String token) {
         this.token = token;
 
         this.config = ConfigFactory.load().getConfig("dialog.botsdk");
@@ -66,9 +67,9 @@ public class LightBot {
 
 
                 // start internal apis
-                activeBot = new ActiveBot(header, executor, channel);
-                messaging = new Messaging(activeBot);
-
+                internalBotApi = new InternalBotApi(header, executor, channel);
+                messagingApi = new MessagingApi(internalBotApi);
+                users = new UsersApi(internalBotApi);
 
                 meta.complete(header);
                 System.out.println("Bot registered with token = " + res.getToken());
@@ -96,7 +97,7 @@ public class LightBot {
                     p.getRight(),
                     SequenceAndUpdatesGrpc.newStub(channel),
                     stub -> {
-                        stub.seqUpdates(Empty.newBuilder().build(), activeBot);
+                        stub.seqUpdates(Empty.newBuilder().build(), internalBotApi);
                         return new Object();
                     }
             );
@@ -144,8 +145,13 @@ public class LightBot {
         return f.apply(newStub);
     }
 
-    public Messaging messaging() {
+    public MessagingApi messaging() {
         waitForInit();
-        return messaging;
+        return messagingApi;
+    }
+
+    public UsersApi users() {
+        waitForInit();
+        return users;
     }
 }

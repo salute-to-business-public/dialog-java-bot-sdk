@@ -11,13 +11,13 @@ import im.dlg.botsdk.light.MessageListener;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class Messaging {
+public class MessagingApi {
 
-    private ActiveBot privateBot;
+    private InternalBotApi privateBot;
     private MessageListener onMessage = null;
 
 
-    public Messaging(ActiveBot privateBot) {
+    public MessagingApi(InternalBotApi privateBot) {
         this.privateBot = privateBot;
 
 

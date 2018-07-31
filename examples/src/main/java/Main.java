@@ -1,19 +1,21 @@
-import im.dlg.botsdk.LightBot;
+import im.dlg.botsdk.Bot;
 
 public class Main {
 
     public static void main(String[] args) throws InterruptedException {
 
-        LightBot bot = new LightBot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8");
+        Bot bot = new Bot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8");
         bot.start();
 
         bot.messaging().onMessage((message) -> {
-            System.out.println("Got a message: " + message.getText());
+            bot.users().get(message.getSender()).thenAccept(user -> user.ifPresent(u -> {
+                System.out.println("Got a message: " + message.getText() + " from user: " + u.getName());
 
-            // Sending reply
-            bot.messaging().send(message.getPeer(), "Reply to : " + message.getText()).thenAccept(uuid -> {
-                System.out.println("Sent a message with UUID: " + uuid);
-            });
+                // Sending reply
+                bot.messaging().send(message.getPeer(), "Reply to : " + message.getText()).thenAccept(uuid -> {
+                    System.out.println("Sent a message with UUID: " + uuid);
+                });
+            }));
         });
 
         bot.await();

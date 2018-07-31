@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
-public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
+public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
 
     private Metadata meta;
     private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
@@ -35,7 +35,7 @@ public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.Se
 
     private Map<Integer, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
-    public ActiveBot(Metadata meta, DialogExecutor executor, ManagedChannel channel) {
+    public InternalBotApi(Metadata meta, DialogExecutor executor, ManagedChannel channel) {
         this.meta = meta;
         this.executor = executor;
         this.channel = channel;
