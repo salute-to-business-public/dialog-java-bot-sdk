@@ -174,6 +174,8 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
             int headerCode = upd.getUpdateHeader();
             if (subscribers.containsKey(headerCode)) {
                 subscribers.get(headerCode).forEach(updateListener -> updateListener.onUpdate(upd.getUpdate()));
+            } else {
+                System.out.println("Unhandled update with header: " + headerCode);
             }
 
         } catch (InvalidProtocolBufferException e) {
