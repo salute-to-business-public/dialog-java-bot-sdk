@@ -7,7 +7,7 @@ public class Main {
     public static void main(String[] args) {
         BotSdk sdk = new BotSdk();
 
-        sdk.start(new MyBot("c07893196cd851b31428338cee2fec5e542de26e")).thenComposeAsync(bot -> {
+        sdk.start(new MyBot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8")).thenComposeAsync(bot -> {
             System.out.println("My bot name is " + bot.getName());
             System.out.println("My bot nick is " + bot.getNick());
             System.out.println("My bot about is " + bot.getAbout());

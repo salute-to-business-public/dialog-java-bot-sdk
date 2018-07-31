@@ -1,6 +1,5 @@
 package im.dlg.botsdk;
 
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import dialog.Definitions;
 
 import java.util.*;

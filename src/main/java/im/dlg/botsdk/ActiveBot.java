@@ -2,50 +2,58 @@ package im.dlg.botsdk;
 
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.protobuf.InvalidProtocolBufferException;
 import dialog.*;
+import im.dlg.botsdk.domain.Message;
+import im.dlg.botsdk.light.UpdateListener;
 import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
+import dialog.MessagingGrpc;
+import dialog.MessagingOuterClass;
+import dialog.MessagingOuterClass.*;
+import dialog.Peers;
+import im.dlg.botsdk.domain.Message;
+import io.grpc.ManagedChannel;
+import io.grpc.stub.StreamObserver;
 
-import java.util.Map;
-import java.util.Optional;
+
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
-public class ActiveBot {
-    private BotSdk sdk;
+public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
+//    private BotSdk sdk;
     private Metadata meta;
     private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     volatile private String name;
     volatile private String nick;
     volatile private String about = "";
 
-    protected MessagingHandlers messagingHandlers;
-    protected ProfileHandlers profileHandlers;
-    protected UserHandlers userHandlers;
 
-    public ActiveBot(BotSdk sdk, UsersOuterClass.User profile, Metadata meta) {
-        this.sdk = sdk;
+    private DialogExecutor executor;
+    private ManagedChannel channel;
+
+    private Map<Integer, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
+
+    public ActiveBot(Metadata meta, DialogExecutor executor, ManagedChannel channel) {
         this.meta = meta;
-        this.name = profile.getName();
-        this.nick = profile.getNick().getValue();
-
-        this.messagingHandlers = new MessagingHandlers(this, sdk.getChannel(), sdk.getExecutor().getExecutor());
-        this.profileHandlers = new ProfileHandlers(this, sdk.getChannel(), sdk.getExecutor().getExecutor());
-        this.userHandlers = new UserHandlers(this, sdk.getChannel(), sdk.getExecutor().getExecutor());
+        this.executor = executor;
+        this.channel = channel;
     }
 
     <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
         T newStub = MetadataUtils.attachHeaders(stub, meta);
-        return sdk.getExecutor().convert(f.apply(newStub));
+        return executor.convert(f.apply(newStub));
     }
 
     CompletableFuture<Optional<Peers.OutPeer>> findOutPeer(Peers.Peer peer) {
         return outPeerMap.containsKey(peer) ?
                 CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peer))) :
                 // implicitly load outPeers of loaded dialogs
-                messagingHandlers.loadDialogs(Sets.newHashSet(peer)).thenApplyAsync(x ->
+                loadDialogs(Sets.newHashSet(peer)).thenApplyAsync(x ->
                         outPeerMap.containsKey(peer) ? Optional.of(outPeerMap.get(peer)) : Optional.empty()
                 );
     }
@@ -61,7 +69,7 @@ public class ActiveBot {
         return outPeerMap.containsKey(senderPeer) ?
                 CompletableFuture.completedFuture(Optional.of(outPeerMap.get(senderPeer))) :
                 // implicitly load outPeers of loaded dialogs
-                messagingHandlers.load(peer, date, 2).thenApplyAsync(x ->
+                load(peer, date, 2).thenApplyAsync(x ->
                         outPeerMap.containsKey(senderPeer) ? Optional.of(outPeerMap.get(senderPeer)) : Optional.empty()
                 );
     }
@@ -90,18 +98,67 @@ public class ActiveBot {
         outPeerMap.put(PeerUtils.toPeer(outPeer), PeerUtils.toOutPeer(outPeer));
     }
 
-    // handlers
-    public MessagingHandlers messaging() {
-        return messagingHandlers;
+    public CompletableFuture<List<Message>> load(Peers.OutPeer peer, long from, Integer limit) {
+        return withToken(
+                MessagingGrpc.newFutureStub(channel),
+                stub -> stub.loadHistory(MessagingOuterClass.RequestLoadHistory.newBuilder()
+                        .setDate(from)
+                        .setLimit(limit)
+                        .setLoadMode(ListLoadMode.LISTLOADMODE_FORWARD)
+                        .addAllOptimizations(RequestsDefaults.optimizations)
+                        .setPeer(peer)
+                        .build()
+                )
+        ).thenApplyAsync(res -> {
+            res.getGroupPeersList().forEach(this::putOutPeer);
+            res.getUserPeersList().forEach(this::putOutPeer);
+
+            List<HistoryMessage> historyList = res.getHistoryList();
+            List<Message> messages = new ArrayList<>();
+            for (HistoryMessage hm : historyList) {
+                putOutPeer(hm.getSenderPeer());
+                messages.add(new Message(
+                        peer,
+                        hm.getSenderPeer(),
+                        UUIDUtils.convert(hm.getMid()),
+                        hm.getMessage().getTextMessage().getText()
+                ));
+            }
+
+            return messages;
+        }, executor);
     }
 
-    public ProfileHandlers profile() {
-        return profileHandlers;
+    CompletableFuture<List<Dialog>> loadDialogs(Set<Peers.Peer> peers) {
+        RequestLoadDialogs request = RequestLoadDialogs.newBuilder()
+                .setLimit(1)
+                .addAllPeersToLoad(peers)
+                .addAllOptimizations(RequestsDefaults.optimizations)
+                .build();
+
+        return withToken(
+                MessagingGrpc.newFutureStub(channel),
+                stub -> stub.loadDialogs(request)
+        ).thenApplyAsync(res -> {
+            res.getGroupPeersList().forEach(this::putOutPeer);
+            res.getUserPeersList().forEach(this::putOutPeer);
+
+            return res.getDialogsList();
+        }, executor);
     }
 
-    public UserHandlers users() {
-        return userHandlers;
-    }
+//    // handlers
+//    public MessagingHandlers messaging() {
+//        return messagingHandlers;
+//    }
+//
+//    public ProfileHandlers profile() {
+//        return profileHandlers;
+//    }
+//
+//    public UserHandlers users() {
+//        return userHandlers;
+//    }
 
     // -- handlers
 
@@ -115,5 +172,40 @@ public class ActiveBot {
 
     public String getAbout() {
         return about;
+    }
+
+
+    public synchronized void subscribeOn(int code, UpdateListener listener) {
+        if (!subscribers.containsKey(code)) {
+            subscribers.put(code, new CopyOnWriteArrayList<>());
+        }
+
+        subscribers.get(code).add(listener);
+    }
+
+    @Override
+    public void onNext(SequenceAndUpdatesOuterClass.SeqUpdateBox value) {
+        try {
+            SequenceAndUpdatesOuterClass.UpdateSeqUpdate upd =
+                    SequenceAndUpdatesOuterClass.UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
+
+            int headerCode = upd.getUpdateHeader();
+            if (subscribers.containsKey(headerCode)) {
+                subscribers.get(headerCode).forEach(updateListener -> updateListener.onUpdate(upd.getUpdate()));
+            }
+
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onError(Throwable t) {
+
+    }
+
+    @Override
+    public void onCompleted() {
+
     }
 }
