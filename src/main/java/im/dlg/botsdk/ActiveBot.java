@@ -115,8 +115,8 @@ public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.Se
             for (HistoryMessage hm : historyList) {
                 putOutPeer(hm.getSenderPeer());
                 messages.add(new Message(
-                        peer,
-                        hm.getSenderPeer(),
+                        PeerUtils.toDomainPeer(peer),
+                        PeerUtils.toDomainPeer(hm.getSenderPeer()),
                         UUIDUtils.convert(hm.getMid()),
                         hm.getMessage().getTextMessage().getText()
                 ));
@@ -183,11 +183,11 @@ public class ActiveBot implements StreamObserver<SequenceAndUpdatesOuterClass.Se
 
     @Override
     public void onError(Throwable t) {
-
+        //TODO: reconnect
     }
 
     @Override
     public void onCompleted() {
-
+        //TODO: reconnect
     }
 }

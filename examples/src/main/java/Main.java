@@ -7,14 +7,14 @@ public class Main {
         LightBot bot = new LightBot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8");
         bot.start();
 
-
         bot.messaging().onMessage((message) -> {
             System.out.println("Got a message: " + message.getText());
 
             // Sending reply
-            bot.messaging().send(message.getPeer(), "Reply to : " + message.getText());
+            bot.messaging().send(message.getPeer(), "Reply to : " + message.getText()).thenAccept(uuid -> {
+                System.out.println("Sent a message with UUID: " + uuid);
+            });
         });
-
 
         bot.await();
     }

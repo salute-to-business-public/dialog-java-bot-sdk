@@ -5,6 +5,7 @@ import dialog.MessagingOuterClass;
 import dialog.MessagingOuterClass.*;
 import dialog.Peers;
 import im.dlg.botsdk.domain.Message;
+import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.light.MessageListener;
 
 import java.util.UUID;
@@ -33,7 +34,9 @@ public class Messaging {
                                                 final String text = msg.getMessage().getTextMessage().getText();
                                                 final UUID uuid = UUIDUtils.convert(msg.getMid());
 
-                                                onReceiveMessage(new Message(outPeer, senderOutPeer, uuid, text));
+                                                onReceiveMessage(new Message(
+                                                        PeerUtils.toDomainPeer(outPeer),
+                                                        PeerUtils.toDomainPeer(senderOutPeer), uuid, text));
                                             })
                                     );
                         });
@@ -49,7 +52,8 @@ public class Messaging {
         onMessage = runnable;
     }
 
-    public CompletableFuture<UUID> send(Peers.OutPeer outPeer, String text) {
+    public CompletableFuture<UUID> send(Peer peer, String text) {
+        Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
         MessageContent msg = MessageContent.newBuilder()
                 .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
