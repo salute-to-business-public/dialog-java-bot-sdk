@@ -1,17 +1,19 @@
 package im.dlg.botsdk.domain;
 
-import dialog.Peers;
 import dialog.UsersOuterClass;
 
 public class User {
+
     public enum Sex {
-        MALE, FEMALE;
+        MALE,
+        FEMALE;
 
         public static Sex fromServerModel(UsersOuterClass.Sex sex) {
             return sex.getNumber() == 3 ? MALE : FEMALE;
         }
     }
-    private Peers.OutPeer outPeer;
+
+    private Peer peer;
     private String name;
     private String nick;
     private String about;
@@ -19,17 +21,18 @@ public class User {
     private String language;
     private String timeZone;
 
-    public User(Peers.OutPeer outPeer, String name, String nick, Sex sex, String about, String language, String timeZone) {
-        this.outPeer = outPeer;
+    public User(Peer peer, String name, String nick, Sex sex, String about, String language, String timeZone) {
+        this.peer = peer;
         this.name = name;
         this.nick = nick;
         this.about = about;
+        this.sex = sex;
         this.language = language;
         this.timeZone = timeZone;
     }
 
-    public Peers.OutPeer getOutPeer() {
-        return outPeer;
+    public Peer getPeer() {
+        return peer;
     }
 
     public String getName() {
@@ -42,6 +45,10 @@ public class User {
 
     public String getAbout() {
         return about;
+    }
+
+    public Sex getSex() {
+        return sex;
     }
 
     public String getLanguage() {

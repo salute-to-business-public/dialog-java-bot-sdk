@@ -8,12 +8,13 @@ import io.grpc.ManagedChannel;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+//TODO: remove
 public class ProfileHandlers {
-    private ActiveBot bot;
+    private InternalBotApi bot;
     private ManagedChannel channel;
     private Executor executor;
 
-    public ProfileHandlers(ActiveBot bot, ManagedChannel channel, Executor executor) {
+    public ProfileHandlers(InternalBotApi bot, ManagedChannel channel, Executor executor) {
         this.bot = bot;
         this.channel = channel;
         this.executor = executor;

@@ -2,53 +2,49 @@ package im.dlg.botsdk;
 
 import com.google.common.collect.Sets;
 import dialog.*;
+import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.User;
-import io.grpc.ManagedChannel;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
-public class UserHandlers {
-    private ActiveBot bot;
-    private ManagedChannel channel;
-    private Executor executor;
+public class UsersApi {
 
-    public UserHandlers(ActiveBot bot, ManagedChannel channel, Executor executor) {
-        this.bot = bot;
-        this.channel = channel;
-        this.executor = executor;
+    private InternalBotApi privateBot;
+
+    public UsersApi(InternalBotApi privateBot) {
+        this.privateBot = privateBot;
     }
 
-    public CompletableFuture<Optional<User>> load(Peers.OutPeer outPeer) {
-        return load(Sets.newHashSet(outPeer)).thenApplyAsync(users ->
-                users.stream().filter(u -> u.getOutPeer().getId() == outPeer.getId()).findFirst()
+    public CompletableFuture<Optional<User>> get(Peer outPeer) {
+        return get(Sets.newHashSet(outPeer)).thenApplyAsync(users ->
+                users.stream().filter(u -> u.getPeer().getId() == outPeer.getId()).findFirst()
         );
     }
 
-    public CompletableFuture<List<User>> load(Set<Peers.OutPeer> outPeers) {
+    public CompletableFuture<List<User>> get(Set<Peer> outPeers) {
         Set<Peers.UserOutPeer> userOutPeers = new HashSet<>();
-        Map<Integer, Peers.OutPeer> peerMap = new HashMap<>();
+        Map<Integer, Peer> peerMap = new HashMap<>();
 
-        for (Peers.OutPeer outPeer : outPeers) {
-            userOutPeers.add(PeerUtils.toUserOutPeer(outPeer));
-            peerMap.put(outPeer.getId(), outPeer);
+        for (Peer peer : outPeers) {
+            userOutPeers.add(PeerUtils.toUserOutPeer(PeerUtils.toServerOutPeer(peer)));
+            peerMap.put(peer.getId(), peer);
         }
 
-        return bot.withToken(
-                SequenceAndUpdatesGrpc.newFutureStub(channel),
+        return privateBot.withToken(
+                SequenceAndUpdatesGrpc.newFutureStub(privateBot.channel),
                 stub -> stub.getReferencedEntitites(
                         SequenceAndUpdatesOuterClass.RequestGetReferencedEntitites.newBuilder()
-                            .addAllUsers(userOutPeers)
-                            .build()
+                                .addAllUsers(userOutPeers)
+                                .build()
                 )
         ).thenComposeAsync(res -> {
             Map<Integer, UsersOuterClass.User> users = new HashMap<>();
             res.getUsersList().stream().forEach(u -> users.put(u.getId(), u));
 
-            return bot.withToken(
-                    UsersGrpc.newFutureStub(channel),
+            return privateBot.withToken(
+                    UsersGrpc.newFutureStub(privateBot.channel),
                     stub -> stub.loadFullUsers(UsersOuterClass.RequestLoadFullUsers.newBuilder()
                             .addAllUserPeers(userOutPeers)
                             .build()
@@ -59,7 +55,7 @@ public class UserHandlers {
                         User.Sex.fromServerModel(u.getSex()), fu.getAbout().getValue(),
                         fu.getPreferredLanguages(0), fu.getTimeZone().getValue()
                 );
-            }).collect(Collectors.toList()), executor);
-        }, executor);
+            }).collect(Collectors.toList()), privateBot.executor.getExecutor());
+        }, privateBot.executor.getExecutor());
     }
 }

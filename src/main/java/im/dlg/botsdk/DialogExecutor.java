@@ -7,12 +7,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executors;
 
 class DialogExecutor {
     private Executor executor;
+
     public DialogExecutor(Integer parallelism) {
-        this.executor = new ForkJoinPool(parallelism);
+        this.executor = Executors.newFixedThreadPool(parallelism);
     }
 
     <T> CompletableFuture<T> convert(ListenableFuture<T> fut) {
