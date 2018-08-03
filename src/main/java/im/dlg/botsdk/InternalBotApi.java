@@ -71,6 +71,11 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
                 );
     }
 
+    CompletableFuture<Optional<Peers.OutPeer>> findUserOutPeer(Integer userId) {
+        Peers.Peer userPeer = PeerUtils.toUserPeer(userId);
+        return findOutPeer(userPeer);
+    }
+
     void setName(String name) {
         this.name = name;
     }

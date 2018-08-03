@@ -33,6 +33,7 @@ public class Bot {
     private InternalBotApi internalBotApi;
     private MessagingApi messagingApi;
     private UsersApi users;
+    private InteractiveApi interactiveApi;
 
     public Bot(String token) {
         this.token = token;
@@ -65,11 +66,9 @@ public class Bot {
                 Metadata.Key<String> key = Metadata.Key.of("x-auth-ticket", Metadata.ASCII_STRING_MARSHALLER);
                 header.put(key, res.getToken());
 
-
                 // start internal apis
                 internalBotApi = new InternalBotApi(header, executor, channel);
-                messagingApi = new MessagingApi(internalBotApi);
-                users = new UsersApi(internalBotApi);
+                runApis(internalBotApi);
 
                 meta.complete(header);
                 System.out.println("Bot registered with token = " + res.getToken());
@@ -107,6 +106,12 @@ public class Bot {
             notifyInit();
             return null;
         });
+    }
+
+    private void runApis(InternalBotApi internalBotApi) {
+        messagingApi = new MessagingApi(internalBotApi);
+        users = new UsersApi(internalBotApi);
+        interactiveApi = new InteractiveApi(internalBotApi);
     }
 
     public void await() throws InterruptedException {
@@ -153,5 +158,10 @@ public class Bot {
     public UsersApi users() {
         waitForInit();
         return users;
+    }
+
+    public InteractiveApi interactiveApi() {
+        waitForInit();
+        return interactiveApi;
     }
 }
