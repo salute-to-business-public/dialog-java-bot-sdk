@@ -13,11 +13,8 @@ public class InteractiveApi {
 
         this.privateBot = privateBot;
 
-        privateBot.subscribeOn(17, update -> {
+        privateBot.subscribeOn(MessagingOuterClass.UpdateInteractiveMediaEvent.class, evt -> {
             try {
-                MessagingOuterClass.UpdateInteractiveMediaEvent evt =
-                        MessagingOuterClass.UpdateInteractiveMediaEvent.parseFrom(update);
-
                 privateBot.findUserOutPeer(evt.getUid()).thenAccept(opt -> opt.ifPresent(outPeer -> {
                     onEvent(new InteractiveEvent(UUIDUtils.convert(evt.getMid()), evt.getId(),
                             evt.getValue(), PeerUtils.toDomainPeer(outPeer)));

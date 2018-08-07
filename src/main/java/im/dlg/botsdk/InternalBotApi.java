@@ -3,6 +3,7 @@ package im.dlg.botsdk;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.Empty;
+import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.StringValue;
 import dialog.*;
@@ -18,6 +19,7 @@ import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +35,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private static Integer appId = 11011;
     private String token;
-    private Map<Integer, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
+    private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
 
     InternalBotApi(String token, String host, int port, DialogExecutor executor) {
@@ -201,25 +203,42 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
         }, executor.getExecutor());
     }
 
-    public synchronized void subscribeOn(int code, UpdateListener listener) {
-        if (!subscribers.containsKey(code)) {
-            subscribers.put(code, new CopyOnWriteArrayList<>());
+    public synchronized <T extends GeneratedMessageV3> void subscribeOn(Class<T> clazz, UpdateListener<T> listener) {
+        if (!subscribers.containsKey(clazz)) {
+            subscribers.put(clazz, new CopyOnWriteArrayList<>());
         }
 
-        subscribers.get(code).add(listener);
+        subscribers.get(clazz).add(listener);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void onNext(SequenceAndUpdatesOuterClass.SeqUpdateBox value) {
         try {
             SequenceAndUpdatesOuterClass.UpdateSeqUpdate upd =
                     SequenceAndUpdatesOuterClass.UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
 
-            int headerCode = upd.getUpdateHeader();
-            if (subscribers.containsKey(headerCode)) {
-                subscribers.get(headerCode).forEach(updateListener -> updateListener.onUpdate(upd.getUpdate()));
-            } else {
-                System.out.println("Unhandled update with header: " + headerCode);
+            Object updateRaw = null;
+
+            try {
+                Field f = upd.getClass().getDeclaredField("update_");
+                f.setAccessible(true);
+                updateRaw = f.get(upd);
+
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                e.printStackTrace();
+            }
+
+            if (!(updateRaw instanceof GeneratedMessageV3)) {
+                return;
+            }
+
+            final GeneratedMessageV3 up = (GeneratedMessageV3) updateRaw;
+
+            for (Map.Entry<Class, List<UpdateListener>> entry : subscribers.entrySet()) {
+                if (updateRaw.getClass().isAssignableFrom(entry.getKey())) {
+                    entry.getValue().forEach(listener -> listener.onUpdate(up));
+                }
             }
 
         } catch (InvalidProtocolBufferException e) {

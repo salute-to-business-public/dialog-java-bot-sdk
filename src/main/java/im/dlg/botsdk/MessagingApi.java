@@ -1,8 +1,10 @@
 package im.dlg.botsdk;
 
 import dialog.MessagingGrpc;
-import dialog.MessagingOuterClass;
-import dialog.MessagingOuterClass.*;
+import dialog.MessagingOuterClass.MessageContent;
+import dialog.MessagingOuterClass.RequestSendMessage;
+import dialog.MessagingOuterClass.TextMessage;
+import dialog.MessagingOuterClass.UpdateMessage;
 import dialog.Peers;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.Peer;
@@ -21,11 +23,8 @@ public class MessagingApi {
     public MessagingApi(InternalBotApi privateBot) {
         this.privateBot = privateBot;
 
-
-        privateBot.subscribeOn(55, update -> {
+        privateBot.subscribeOn(UpdateMessage.class, msg -> {
             try {
-                MessagingOuterClass.UpdateMessage msg =
-                        MessagingOuterClass.UpdateMessage.parseFrom(update);
                 if (msg.getMessage().getBodyCase().getNumber() == 1) {
                     privateBot.findOutPeer(msg.getPeer()).thenAccept(optOutPeer -> {
                         optOutPeer.ifPresent(outPeer -> {
