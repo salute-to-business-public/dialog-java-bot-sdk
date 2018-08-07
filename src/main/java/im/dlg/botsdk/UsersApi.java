@@ -33,7 +33,7 @@ public class UsersApi {
         }
 
         return privateBot.withToken(
-                SequenceAndUpdatesGrpc.newFutureStub(privateBot.channel),
+                SequenceAndUpdatesGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.getReferencedEntitites(
                         SequenceAndUpdatesOuterClass.RequestGetReferencedEntitites.newBuilder()
                                 .addAllUsers(userOutPeers)
@@ -41,10 +41,10 @@ public class UsersApi {
                 )
         ).thenComposeAsync(res -> {
             Map<Integer, UsersOuterClass.User> users = new HashMap<>();
-            res.getUsersList().stream().forEach(u -> users.put(u.getId(), u));
+            res.getUsersList().forEach(u -> users.put(u.getId(), u));
 
             return privateBot.withToken(
-                    UsersGrpc.newFutureStub(privateBot.channel),
+                    UsersGrpc.newFutureStub(privateBot.channel.getChannel()),
                     stub -> stub.loadFullUsers(UsersOuterClass.RequestLoadFullUsers.newBuilder()
                             .addAllUserPeers(userOutPeers)
                             .build()

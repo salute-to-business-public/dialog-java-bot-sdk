@@ -2,19 +2,21 @@ package im.dlg.botsdk;
 
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.protobuf.Empty;
 import com.google.protobuf.InvalidProtocolBufferException;
-import dialog.MessagingGrpc;
-import dialog.MessagingOuterClass;
-import dialog.MessagingOuterClass.*;
-import dialog.Peers;
-import dialog.SequenceAndUpdatesOuterClass;
+import com.google.protobuf.StringValue;
+import dialog.*;
+import dialog.MessagingOuterClass.Dialog;
+import dialog.MessagingOuterClass.HistoryMessage;
+import dialog.MessagingOuterClass.ListLoadMode;
+import dialog.MessagingOuterClass.RequestLoadDialogs;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.light.UpdateListener;
-import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -22,28 +24,96 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
-public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
-
-    private Metadata meta;
-    private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
-    volatile private String name;
-    volatile private String nick;
-    volatile private String about = "";
+class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
 
     DialogExecutor executor;
-    ManagedChannel channel;
+    ChannelWrapper channel;
 
+    private volatile Metadata metadata;
+    private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
+    private static Integer appId = 11011;
+    private String token;
     private Map<Integer, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
-    public InternalBotApi(Metadata meta, DialogExecutor executor, ManagedChannel channel) {
-        this.meta = meta;
+
+    InternalBotApi(String token, String host, int port, DialogExecutor executor) {
+        this.token = token;
         this.executor = executor;
-        this.channel = channel;
+        this.channel = new ChannelWrapper(host, port);
+    }
+
+    public CompletableFuture<Void> start() {
+
+        channel.connect();
+        String deviceTitle = "BotWithToken" + token;
+        CompletableFuture<Metadata> meta = new CompletableFuture<>();
+
+        return executor.convert(
+                RegistrationGrpc.newFutureStub(channel.getChannel()).registerDevice(
+                        RegistrationOuterClass.RequestRegisterDevice.newBuilder()
+                                .setAppId(appId)
+                                .setAppTitle("BotSdk")
+                                .setDeviceTitle(deviceTitle)
+                                .build()
+                )
+        ).whenCompleteAsync((res, t) -> {
+            if (res != null) {
+                Metadata header = new Metadata();
+                Metadata.Key<String> key = Metadata.Key.of("x-auth-ticket", Metadata.ASCII_STRING_MARSHALLER);
+                header.put(key, res.getToken());
+
+                meta.complete(header);
+                metadata = header;
+                System.out.println("Bot registered with token = " + res.getToken());
+            } else if (t != null) {
+                meta.completeExceptionally(t);
+            }
+        }).thenComposeAsync(res -> meta).thenComposeAsync(m ->
+                executor.convert(withToken(m,
+                        AuthenticationGrpc.newFutureStub(channel.getChannel()),
+                        stub -> stub.startTokenAuth(
+                                AuthenticationOuterClass.RequestStartTokenAuth.newBuilder()
+                                        .setApiKey("BotSdk")
+                                        .setAppId(appId)
+                                        .setDeviceTitle(deviceTitle)
+                                        .addPreferredLanguages("RU")
+                                        .setTimeZone(StringValue.newBuilder().setValue("+3").build())
+                                        .setToken(token)
+                                        .build()
+                        )
+                )).thenApplyAsync(res -> new ImmutablePair<>(res.getUser(), m))
+        ).thenApplyAsync(p -> {
+
+            withToken(p.getRight(),
+                    SequenceAndUpdatesGrpc.newStub(channel.getChannel()),
+                    stub -> {
+                        stub.seqUpdates(Empty.newBuilder().build(), this);
+                        return new Object();
+                    }
+            );
+
+            System.out.println("Bot authorized with id = " + p.getLeft().getId());
+
+            return null;
+        });
+    }
+
+    private void reconnect() {
+        channel.connect();
+        withToken(metadata, SequenceAndUpdatesGrpc.newStub(channel.getChannel()), stub -> {
+            stub.seqUpdates(Empty.newBuilder().build(), this);
+            return new Object();
+        });
     }
 
     <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
-        T newStub = MetadataUtils.attachHeaders(stub, meta);
+        T newStub = MetadataUtils.attachHeaders(stub, metadata);
         return executor.convert(f.apply(newStub));
+    }
+
+    <T extends AbstractStub<T>, R> R withToken(Metadata meta, T stub, Function<T, R> f) {
+        T newStub = MetadataUtils.attachHeaders(stub, meta);
+        return f.apply(newStub);
     }
 
     CompletableFuture<Optional<Peers.OutPeer>> findOutPeer(Peers.Peer peer) {
@@ -53,12 +123,6 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
                 loadDialogs(Sets.newHashSet(peer)).thenApplyAsync(x ->
                         outPeerMap.containsKey(peer) ? Optional.of(outPeerMap.get(peer)) : Optional.empty()
                 );
-    }
-
-    CompletableFuture<Peers.OutPeer> getOutPeer(Peers.Peer peer) {
-        return findOutPeer(peer).thenApplyAsync(optPeer ->
-                optPeer.orElseThrow(() -> SecurityUtils.unaccessibleDestination(peer))
-        );
     }
 
     CompletableFuture<Optional<Peers.OutPeer>> loadSenderOutPeer(Integer senderId, Peers.OutPeer peer, long date) {
@@ -76,33 +140,21 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
         return findOutPeer(userPeer);
     }
 
-    void setName(String name) {
-        this.name = name;
-    }
-
-    void setNick(String nick) {
-        this.nick = nick;
-    }
-
-    void setAbout(String about) {
-        this.about = about;
-    }
-
-    void putOutPeer(Peers.OutPeer outPeer) {
+    private void putOutPeer(Peers.OutPeer outPeer) {
         outPeerMap.put(PeerUtils.toPeer(outPeer), outPeer);
     }
 
-    void putOutPeer(Peers.UserOutPeer outPeer) {
+    private void putOutPeer(Peers.UserOutPeer outPeer) {
         outPeerMap.put(PeerUtils.toPeer(outPeer), PeerUtils.toOutPeer(outPeer));
     }
 
-    void putOutPeer(Peers.GroupOutPeer outPeer) {
+    private void putOutPeer(Peers.GroupOutPeer outPeer) {
         outPeerMap.put(PeerUtils.toPeer(outPeer), PeerUtils.toOutPeer(outPeer));
     }
 
     public CompletableFuture<List<Message>> load(Peers.OutPeer peer, long from, Integer limit) {
         return withToken(
-                MessagingGrpc.newFutureStub(channel),
+                MessagingGrpc.newFutureStub(channel.getChannel()),
                 stub -> stub.loadHistory(MessagingOuterClass.RequestLoadHistory.newBuilder()
                         .setDate(from)
                         .setLimit(limit)
@@ -139,7 +191,7 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
                 .build();
 
         return withToken(
-                MessagingGrpc.newFutureStub(channel),
+                MessagingGrpc.newFutureStub(channel.getChannel()),
                 stub -> stub.loadDialogs(request)
         ).thenApplyAsync(res -> {
             res.getGroupPeersList().forEach(this::putOutPeer);
@@ -148,19 +200,6 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
             return res.getDialogsList();
         }, executor.getExecutor());
     }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getNick() {
-        return nick;
-    }
-
-    public String getAbout() {
-        return about;
-    }
-
 
     public synchronized void subscribeOn(int code, UpdateListener listener) {
         if (!subscribers.containsKey(code)) {
@@ -190,11 +229,13 @@ public class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterCla
 
     @Override
     public void onError(Throwable t) {
-        //TODO: reconnect
+        t.printStackTrace();
+        reconnect();
     }
 
     @Override
     public void onCompleted() {
-        //TODO: reconnect
+        System.out.println("onCompleted");
+        reconnect();
     }
 }

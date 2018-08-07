@@ -8,6 +8,7 @@ import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.light.MessageListener;
 
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,8 +59,9 @@ public class MessagingApi {
                 .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
         return privateBot.withToken(
-                MessagingGrpc.newFutureStub(privateBot.channel),
-                stub -> stub.sendMessage(RequestSendMessage.newBuilder().setPeer(outPeer).setMessage(msg).build())
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.sendMessage(RequestSendMessage.newBuilder().setRid(new Random().nextLong())
+                        .setPeer(outPeer).setMessage(msg).build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
     }
 
