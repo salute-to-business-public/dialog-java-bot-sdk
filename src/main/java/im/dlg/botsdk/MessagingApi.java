@@ -48,8 +48,8 @@ public class MessagingApi {
         });
     }
 
-    public void onMessage(MessageListener runnable) {
-        onMessage = runnable;
+    public void onMessage(MessageListener listener) {
+        onMessage = listener;
     }
 
     public CompletableFuture<UUID> send(Peer peer, String text) {
