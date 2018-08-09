@@ -1,4 +1,4 @@
-package im.dlg.botsdk;
+package im.dlg.botsdk.utils;
 
 import dialog.Definitions;
 
@@ -14,7 +14,7 @@ public class UUIDUtils {
         }
     }
 
-    static UUID convert(Definitions.UUIDValue value) {
+    public static UUID convert(Definitions.UUIDValue value) {
         byte[] bytes = value.getValue().toByteArray();
         if (bytes.length == 16) {
             return new UUID(
@@ -26,7 +26,7 @@ public class UUIDUtils {
         }
     }
 
-    static long longFromBytes(byte[] bytes) {
+    public static long longFromBytes(byte[] bytes) {
         long value = 0L;
         int i = 0;
 
@@ -38,7 +38,7 @@ public class UUIDUtils {
         return value;
     }
 
-    static byte[] longsToBytes(long v1, long v2) {
+    public static byte[] longsToBytes(long v1, long v2) {
         byte[] bytes = new byte[16];
         int i = 15;
         int j = 1;

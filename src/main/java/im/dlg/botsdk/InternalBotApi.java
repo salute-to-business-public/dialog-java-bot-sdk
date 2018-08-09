@@ -13,6 +13,9 @@ import dialog.MessagingOuterClass.ListLoadMode;
 import dialog.MessagingOuterClass.RequestLoadDialogs;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.light.UpdateListener;
+import im.dlg.botsdk.utils.Constants;
+import im.dlg.botsdk.utils.PeerUtils;
+import im.dlg.botsdk.utils.UUIDUtils;
 import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
@@ -161,7 +164,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
                         .setDate(from)
                         .setLimit(limit)
                         .setLoadMode(ListLoadMode.LISTLOADMODE_FORWARD)
-                        .addAllOptimizations(RequestsDefaults.optimizations)
+                        .addAllOptimizations(Constants.OPTIMISATIONS)
                         .setPeer(peer)
                         .build()
                 )
@@ -189,7 +192,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
         RequestLoadDialogs request = RequestLoadDialogs.newBuilder()
                 .setLimit(1)
                 .addAllPeersToLoad(peers)
-                .addAllOptimizations(RequestsDefaults.optimizations)
+                .addAllOptimizations(Constants.OPTIMISATIONS)
                 .build();
 
         return withToken(

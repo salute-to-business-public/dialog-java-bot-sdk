@@ -8,8 +8,10 @@ import im.dlg.botsdk.domain.InteractiveEvent;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.interactive.InteractiveGroup;
 import im.dlg.botsdk.light.InteractiveEventListener;
+import im.dlg.botsdk.utils.MsgUtils;
+import im.dlg.botsdk.utils.PeerUtils;
+import im.dlg.botsdk.utils.UUIDUtils;
 
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -77,7 +79,7 @@ public class InteractiveApi {
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.sendMessage(RequestSendMessage.newBuilder().setRid(new Random().nextLong())
+                stub -> stub.sendMessage(RequestSendMessage.newBuilder().setRid(MsgUtils.uniqueCurrentTimeMS())
 
                         .setPeer(outPeer).setMessage(msg).build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());

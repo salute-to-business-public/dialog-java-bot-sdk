@@ -4,6 +4,7 @@ import com.google.common.collect.Sets;
 import dialog.*;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.User;
+import im.dlg.botsdk.utils.PeerUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;

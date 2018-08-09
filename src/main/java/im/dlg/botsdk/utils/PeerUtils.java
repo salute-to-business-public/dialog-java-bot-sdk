@@ -1,31 +1,31 @@
-package im.dlg.botsdk;
+package im.dlg.botsdk.utils;
 
 import dialog.Peers;
 import im.dlg.botsdk.domain.Peer;
 
-class PeerUtils {
-    static Peers.Peer toPeer(Peers.OutPeer op) {
+public class PeerUtils {
+    public static Peers.Peer toPeer(Peers.OutPeer op) {
         return Peers.Peer.newBuilder()
                 .setType(op.getType())
                 .setId(op.getId())
                 .build();
     }
 
-    static Peers.Peer toPeer(Peers.UserOutPeer uop) {
+    public static Peers.Peer toPeer(Peers.UserOutPeer uop) {
         return Peers.Peer.newBuilder()
                 .setType(Peers.PeerType.PEERTYPE_PRIVATE)
                 .setId(uop.getUid())
                 .build();
     }
 
-    static Peers.Peer toPeer(Peers.GroupOutPeer uop) {
+    public static Peers.Peer toPeer(Peers.GroupOutPeer uop) {
         return Peers.Peer.newBuilder()
                 .setType(Peers.PeerType.PEERTYPE_GROUP)
                 .setId(uop.getGroupId())
                 .build();
     }
 
-    static Peers.OutPeer toOutPeer(Peers.UserOutPeer uop) {
+    public static Peers.OutPeer toOutPeer(Peers.UserOutPeer uop) {
         return Peers.OutPeer.newBuilder()
                 .setType(Peers.PeerType.PEERTYPE_PRIVATE)
                 .setId(uop.getUid())
@@ -33,7 +33,7 @@ class PeerUtils {
                 .build();
     }
 
-    static Peers.OutPeer toOutPeer(Peers.GroupOutPeer uop) {
+    public static Peers.OutPeer toOutPeer(Peers.GroupOutPeer uop) {
         return Peers.OutPeer.newBuilder()
                 .setType(Peers.PeerType.PEERTYPE_GROUP)
                 .setId(uop.getGroupId())
@@ -41,21 +41,21 @@ class PeerUtils {
                 .build();
     }
 
-    static Peers.UserOutPeer toUserOutPeer(Peers.OutPeer outPeer) {
+    public static Peers.UserOutPeer toUserOutPeer(Peers.OutPeer outPeer) {
         return Peers.UserOutPeer.newBuilder()
                 .setUid(outPeer.getId())
                 .setAccessHash(outPeer.getAccessHash())
                 .build();
     }
 
-    static Peers.Peer toUserPeer(Integer userId) {
+    public static Peers.Peer toUserPeer(Integer userId) {
         return Peers.Peer.newBuilder()
                 .setType(Peers.PeerType.PEERTYPE_PRIVATE)
                 .setId(userId)
                 .build();
     }
 
-    static Peer toDomainPeer(Peers.OutPeer outPeer) {
+    public static Peer toDomainPeer(Peers.OutPeer outPeer) {
 
         Peer.PeerType type;
 
@@ -80,7 +80,7 @@ class PeerUtils {
         return new Peer(outPeer.getId(), type, outPeer.getAccessHash());
     }
 
-    static Peers.OutPeer toServerOutPeer(Peer peer) {
+    public static Peers.OutPeer toServerOutPeer(Peer peer) {
 
         Peers.PeerType type;
         switch (peer.getType()) {
