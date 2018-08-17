@@ -24,6 +24,10 @@ public class InteractiveAction {
         this(id, Style.PRIMARY, widget, confirm);
     }
 
+    public InteractiveAction(String id, InteractiveWidget widget) {
+        this(id, Style.PRIMARY, widget, null);
+    }
+
     public String getId() {
         return id;
     }

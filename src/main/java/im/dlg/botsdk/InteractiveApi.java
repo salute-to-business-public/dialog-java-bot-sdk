@@ -6,7 +6,10 @@ import dialog.MessagingOuterClass.*;
 import dialog.Peers;
 import im.dlg.botsdk.domain.InteractiveEvent;
 import im.dlg.botsdk.domain.Peer;
+import im.dlg.botsdk.domain.interactive.InteractiveAction;
+import im.dlg.botsdk.domain.interactive.InteractiveButton;
 import im.dlg.botsdk.domain.interactive.InteractiveGroup;
+import im.dlg.botsdk.domain.interactive.InteractiveWidget;
 import im.dlg.botsdk.light.InteractiveEventListener;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
@@ -52,24 +55,34 @@ public class InteractiveApi {
     public CompletableFuture<UUID> send(Peer peer, InteractiveGroup group) {
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
 
-        //TODO: configure properly
-        InteractiveMediaButton btn =
-                InteractiveMediaButton.newBuilder().setValue("test")
-                        .setLabel(StringValue.newBuilder().setValue("test").build()).build();
-
-
-        InteractiveMediaWidget widget =
-                InteractiveMediaWidget.newBuilder().setInteractiveMediaButton(btn).build();
-
-        InteractiveMedia media =
-                InteractiveMedia.newBuilder().setWidget(widget).build();
-
-        InteractiveMediaGroup gr =
+        InteractiveMediaGroup.Builder apiMediaGroup =
                 InteractiveMediaGroup.newBuilder()
-                        .addActions(media)
-                        .build();
+                        .setDescription(StringValue.of(group.getDescription()))
+                        .setTitle(StringValue.of(group.getTitle()));
 
-        MessageMedia messageMedia = MessageMedia.newBuilder().addActions(gr).build();
+        for (InteractiveAction interactiveAction : group.getActions()) {
+            InteractiveWidget w1 = interactiveAction.getWidget();
+            if (w1 instanceof InteractiveButton) {
+
+                InteractiveButton b = (InteractiveButton) w1;
+                InteractiveMediaButton btn =
+                        InteractiveMediaButton.newBuilder().setValue(b.getValue())
+                                .setLabel(StringValue.newBuilder().setValue(b.getLabel()).build()).build();
+
+
+                InteractiveMediaWidget widget =
+                        InteractiveMediaWidget.newBuilder().setInteractiveMediaButton(btn).build();
+
+
+                InteractiveMedia media =
+                        InteractiveMedia.newBuilder().setWidget(widget).build();
+
+
+                apiMediaGroup.addActions(media);
+            }
+        }
+
+        MessageMedia messageMedia = MessageMedia.newBuilder().addActions(apiMediaGroup).build();
 
         MessageContent msg = MessageContent.newBuilder()
                 .setTextMessage(TextMessage.newBuilder()
