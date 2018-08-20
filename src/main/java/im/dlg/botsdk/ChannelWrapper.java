@@ -17,7 +17,12 @@ public class ChannelWrapper {
     }
 
     public synchronized void connect() {
-        this.channel = ManagedChannelBuilder
+
+        if (channel != null) {
+            channel.shutdownNow();
+        }
+
+        channel = ManagedChannelBuilder
                 .forAddress(host, port)
                 .idleTimeout(10, TimeUnit.SECONDS)
                 .usePlaintext()

@@ -31,4 +31,14 @@ public class InteractiveEvent {
     public Peer getPeer() {
         return peer;
     }
+
+    @Override
+    public String toString() {
+        return "InteractiveEvent{" +
+                "mid=" + mid +
+                ", id='" + id + '\'' +
+                ", value='" + value + '\'' +
+                ", peer=" + peer +
+                '}';
+    }
 }

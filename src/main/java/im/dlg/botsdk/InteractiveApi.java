@@ -2,14 +2,12 @@ package im.dlg.botsdk;
 
 import com.google.protobuf.StringValue;
 import dialog.MessagingGrpc;
+import dialog.MessagingOuterClass;
 import dialog.MessagingOuterClass.*;
 import dialog.Peers;
 import im.dlg.botsdk.domain.InteractiveEvent;
 import im.dlg.botsdk.domain.Peer;
-import im.dlg.botsdk.domain.interactive.InteractiveAction;
-import im.dlg.botsdk.domain.interactive.InteractiveButton;
-import im.dlg.botsdk.domain.interactive.InteractiveGroup;
-import im.dlg.botsdk.domain.interactive.InteractiveWidget;
+import im.dlg.botsdk.domain.interactive.*;
 import im.dlg.botsdk.light.InteractiveEventListener;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
@@ -56,39 +54,42 @@ public class InteractiveApi {
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
 
         InteractiveMediaGroup.Builder apiMediaGroup =
-                InteractiveMediaGroup.newBuilder()
-                        .setDescription(StringValue.of(group.getDescription()))
-                        .setTitle(StringValue.of(group.getTitle()));
+                InteractiveMediaGroup.newBuilder();
 
-        for (InteractiveAction interactiveAction : group.getActions()) {
-            InteractiveWidget w1 = interactiveAction.getWidget();
-            if (w1 instanceof InteractiveButton) {
+        if (group.getTitle() != null && !group.getTitle().isEmpty()) {
+            apiMediaGroup.setTitle(StringValue.of(group.getTitle()));
+        }
 
-                InteractiveButton b = (InteractiveButton) w1;
-                InteractiveMediaButton btn =
-                        InteractiveMediaButton.newBuilder().setValue(b.getValue())
-                                .setLabel(StringValue.newBuilder().setValue(b.getLabel()).build()).build();
+        if (group.getDescription() != null && !group.getDescription().isEmpty()) {
+            apiMediaGroup.setDescription(StringValue.of(group.getDescription()));
+        }
 
+        for (InteractiveAction action : group.getActions()) {
 
-                InteractiveMediaWidget widget =
-                        InteractiveMediaWidget.newBuilder().setInteractiveMediaButton(btn).build();
+            InteractiveMedia.Builder apiMedia = InteractiveMedia.newBuilder()
+                    .setId(action.getId())
+                    .setStyle(buildStyle(action.getStyle()));
 
+            InteractiveWidget widget = action.getWidget();
 
-                InteractiveMedia media =
-                        InteractiveMedia.newBuilder().setWidget(widget).build();
-
-
-                apiMediaGroup.addActions(media);
+            if (widget instanceof InteractiveButton) {
+                apiMedia.setWidget(buildButton((InteractiveButton) widget));
+            } else if (widget instanceof InteractiveSelect) {
+                apiMedia.setWidget(buildSelectMenu((InteractiveSelect) widget));
             }
+
+            if (action.getConfirm() != null) {
+                apiMedia.setConfirm(buildConfirm(action));
+            }
+
+            apiMediaGroup.addActions(apiMedia);
         }
 
         MessageMedia messageMedia = MessageMedia.newBuilder().addActions(apiMediaGroup).build();
 
         MessageContent msg = MessageContent.newBuilder()
                 .setTextMessage(TextMessage.newBuilder()
-                        .addMedia(messageMedia)
-                        .build())
-                .build();
+                        .addMedia(messageMedia)).build();
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
@@ -96,5 +97,67 @@ public class InteractiveApi {
 
                         .setPeer(outPeer).setMessage(msg).build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+    }
+
+    private InteractiveMediaWidget buildButton(InteractiveButton button) {
+        InteractiveMediaButton.Builder btn =
+                InteractiveMediaButton.newBuilder().setValue(button.getValue());
+
+        if (button.getLabel() != null && !button.getLabel().isEmpty()) {
+            btn.setLabel(StringValue.of(button.getLabel()));
+        }
+
+        return InteractiveMediaWidget.newBuilder().setInteractiveMediaButton(btn).build();
+    }
+
+    private InteractiveMediaWidget buildSelectMenu(InteractiveSelect select) {
+        InteractiveMediaSelect.Builder apiSelect = InteractiveMediaSelect.newBuilder();
+
+        for (InteractiveSelectOption selectOption : select.getOptions()) {
+            InteractiveMediaSelectOption.Builder apiSelectOption = InteractiveMediaSelectOption.newBuilder();
+            apiSelectOption.setValue(selectOption.getValue()).setLabel(selectOption.getLabel());
+            apiSelect.addOptions(apiSelectOption);
+        }
+
+        if (select.getLabel() != null && !select.getLabel().isEmpty()) {
+            apiSelect.setLabel(StringValue.of(select.getLabel()));
+        }
+
+        if (select.getDefaultValue() != null && !select.getDefaultValue().isEmpty()) {
+            apiSelect.setDefaultValue(StringValue.of(select.getDefaultValue()));
+        }
+
+        return InteractiveMediaWidget.newBuilder().setInteractiveMediaSelect(apiSelect).build();
+    }
+
+    private InteractiveMediaConfirm.Builder buildConfirm(InteractiveAction action) {
+        InteractiveMediaConfirm.Builder confirm = InteractiveMediaConfirm.newBuilder();
+
+        if (action.getConfirm().getText() != null) {
+            confirm.setText(StringValue.of(action.getConfirm().getText()));
+        }
+
+        if (action.getConfirm().getTitle() != null) {
+            confirm.setTitle(StringValue.of(action.getConfirm().getTitle()));
+        }
+
+        if (action.getConfirm().getOk() != null) {
+            confirm.setOk(StringValue.of(action.getConfirm().getOk()));
+        }
+
+        if (action.getConfirm().getDismiss() != null) {
+            confirm.setDismiss(StringValue.of(action.getConfirm().getDismiss()));
+        }
+        return confirm;
+    }
+
+    private InteractiveMediaStyle buildStyle(InteractiveAction.Style style) {
+        if (style == InteractiveAction.Style.DANGER) {
+            return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DANGER;
+        } else if (style == InteractiveAction.Style.PRIMARY) {
+            return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_PRIMARY;
+        } else {
+            return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DEFAULT;
+        }
     }
 }

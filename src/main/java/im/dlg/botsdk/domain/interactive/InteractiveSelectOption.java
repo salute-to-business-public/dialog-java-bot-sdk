@@ -1,6 +1,6 @@
 package im.dlg.botsdk.domain.interactive;
 
-public class InteractiveSelectOption implements InteractiveWidget {
+public class InteractiveSelectOption {
     private String value;
     private String label;
 

@@ -15,6 +15,7 @@ import im.dlg.botsdk.utils.UUIDUtils;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class MessagingApi {
 
@@ -60,7 +61,8 @@ public class MessagingApi {
                 .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
         return privateBot.withToken(
-                MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.sendMessage(RequestSendMessage.newBuilder().setRid(MsgUtils.uniqueCurrentTimeMS())
                         .setPeer(outPeer).setMessage(msg).build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());

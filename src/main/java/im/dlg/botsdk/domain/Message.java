@@ -31,4 +31,14 @@ public class Message {
     public String getText() {
         return text;
     }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "peer=" + peer +
+                ", sender=" + sender +
+                ", messageId=" + messageId +
+                ", text='" + text + '\'' +
+                '}';
+    }
 }
