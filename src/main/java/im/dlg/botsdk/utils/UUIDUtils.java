@@ -1,5 +1,6 @@
 package im.dlg.botsdk.utils;
 
+import com.google.protobuf.ByteString;
 import dialog.Definitions;
 
 import java.util.Arrays;
@@ -26,7 +27,13 @@ public class UUIDUtils {
         }
     }
 
-    public static long longFromBytes(byte[] bytes) {
+    public static Definitions.UUIDValue convertToApi(UUID uuid) {
+        return Definitions.UUIDValue.newBuilder().
+                setValue(ByteString.copyFrom(longsToBytes(uuid.getMostSignificantBits(),
+                        uuid.getLeastSignificantBits()))).build();
+    }
+
+    private static long longFromBytes(byte[] bytes) {
         long value = 0L;
         int i = 0;
 
@@ -38,7 +45,7 @@ public class UUIDUtils {
         return value;
     }
 
-    public static byte[] longsToBytes(long v1, long v2) {
+    private static byte[] longsToBytes(long v1, long v2) {
         byte[] bytes = new byte[16];
         int i = 15;
         int j = 1;

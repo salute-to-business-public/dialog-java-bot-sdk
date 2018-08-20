@@ -2,9 +2,7 @@ package im.dlg.botsdk;
 
 import com.google.protobuf.StringValue;
 import dialog.MessagingGrpc;
-import dialog.MessagingOuterClass;
 import dialog.MessagingOuterClass.*;
-import dialog.Peers;
 import im.dlg.botsdk.domain.InteractiveEvent;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.interactive.*;
@@ -51,7 +49,32 @@ public class InteractiveApi {
     }
 
     public CompletableFuture<UUID> send(Peer peer, InteractiveGroup group) {
-        Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
+
+        RequestSendMessage request = RequestSendMessage.newBuilder()
+                .setRid(MsgUtils.uniqueCurrentTimeMS())
+                .setPeer(PeerUtils.toServerOutPeer(peer))
+                .setMessage(buildMessageContent(group)).build();
+
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.sendMessage(request)
+        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+    }
+
+    public CompletableFuture<UUID> update(UUID uuid, InteractiveGroup group) {
+
+        RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
+                .setMid(UUIDUtils.convertToApi(uuid))
+                .setUpdatedMessage(buildMessageContent(group))
+                .build();
+
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.updateMessage(request)
+        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+    }
+
+    private MessageContent buildMessageContent(InteractiveGroup group) {
 
         InteractiveMediaGroup.Builder apiMediaGroup =
                 InteractiveMediaGroup.newBuilder();
@@ -87,16 +110,9 @@ public class InteractiveApi {
 
         MessageMedia messageMedia = MessageMedia.newBuilder().addActions(apiMediaGroup).build();
 
-        MessageContent msg = MessageContent.newBuilder()
+        return MessageContent.newBuilder()
                 .setTextMessage(TextMessage.newBuilder()
                         .addMedia(messageMedia)).build();
-
-        return privateBot.withToken(
-                MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.sendMessage(RequestSendMessage.newBuilder().setRid(MsgUtils.uniqueCurrentTimeMS())
-
-                        .setPeer(outPeer).setMessage(msg).build())
-        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
     }
 
     private InteractiveMediaWidget buildButton(InteractiveButton button) {
