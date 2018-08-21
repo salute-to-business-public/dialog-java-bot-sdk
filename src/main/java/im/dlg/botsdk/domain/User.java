@@ -58,4 +58,17 @@ public class User {
     public String getTimeZone() {
         return timeZone;
     }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "peer=" + peer +
+                ", name='" + name + '\'' +
+                ", nick='" + nick + '\'' +
+                ", about='" + about + '\'' +
+                ", sex=" + sex +
+                ", language='" + language + '\'' +
+                ", timeZone='" + timeZone + '\'' +
+                '}';
+    }
 }

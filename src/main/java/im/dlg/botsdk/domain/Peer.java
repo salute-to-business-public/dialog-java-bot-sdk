@@ -30,4 +30,13 @@ public class Peer {
         SIP,
         UNKNOWN
     }
+
+    @Override
+    public String toString() {
+        return "Peer{" +
+                "id=" + id +
+                ", type=" + type +
+                ", accessHash=" + accessHash +
+                '}';
+    }
 }

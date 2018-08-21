@@ -1,12 +1,13 @@
 import im.dlg.botsdk.Bot;
 
+import java.util.concurrent.ExecutionException;
+
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
 
-        Bot bot = new Bot("c1ff5ca4b7e5fa4660c6a730fdcb613e31deafd8");
-        bot.start();
-        
+        Bot bot = Bot.start("76046c2bff10a0fe6a9c101d1156d340ef664fd6").get();
+
         bot.messaging().onMessage(message ->
                 bot.users().get(message.getSender()).thenAccept(userOpt -> userOpt.ifPresent(user -> {
                             System.out.println("Got a message: " + message.getText() + " from user: " + user.getName());
