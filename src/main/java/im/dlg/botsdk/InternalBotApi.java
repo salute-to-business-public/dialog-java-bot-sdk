@@ -180,7 +180,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
                         PeerUtils.toDomainPeer(peer),
                         PeerUtils.toDomainPeer(hm.getSenderPeer()),
                         UUIDUtils.convert(hm.getMid()),
-                        hm.getMessage().getTextMessage().getText()
+                        hm.getMessage().getTextMessage().getText(), hm.getDate()
                 ));
             }
 

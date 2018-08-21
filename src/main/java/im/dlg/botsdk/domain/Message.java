@@ -8,12 +8,14 @@ public class Message {
     private Peer sender;
     private UUID messageId;
     private String text;
+    private long date;
 
-    public Message(Peer peer, Peer sender, UUID messageId, String text) {
+    public Message(Peer peer, Peer sender, UUID messageId, String text, long date) {
         this.peer = peer;
         this.sender = sender;
         this.messageId = messageId;
         this.text = text;
+        this.date = date;
     }
 
     public Peer getPeer() {
@@ -30,6 +32,10 @@ public class Message {
 
     public String getText() {
         return text;
+    }
+
+    public long getDate() {
+        return date;
     }
 
     @Override

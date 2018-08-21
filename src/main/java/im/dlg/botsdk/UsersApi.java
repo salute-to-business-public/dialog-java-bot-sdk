@@ -14,16 +14,27 @@ public class UsersApi {
 
     private InternalBotApi privateBot;
 
-    public UsersApi(InternalBotApi privateBot) {
+    UsersApi(InternalBotApi privateBot) {
         this.privateBot = privateBot;
     }
 
+    /**
+     * Retrieves user info for a peer
+     *
+     * @param outPeer - user peer
+     * @return future with the user data
+     */
     public CompletableFuture<Optional<User>> get(Peer outPeer) {
         return get(Sets.newHashSet(outPeer)).thenApplyAsync(users ->
-                users.stream().filter(u -> u.getPeer().getId() == outPeer.getId()).findFirst()
-        );
+                users.stream().filter(u -> u.getPeer().getId() == outPeer.getId()).findFirst());
     }
 
+    /**
+     * Retrieves user info for several peers
+     *
+     * @param outPeers - set of peers
+     * @return future with users data
+     */
     public CompletableFuture<List<User>> get(Set<Peer> outPeers) {
         Set<Peers.UserOutPeer> userOutPeers = new HashSet<>();
         Map<Integer, Peer> peerMap = new HashMap<>();
@@ -38,8 +49,8 @@ public class UsersApi {
                 stub -> stub.getReferencedEntitites(
                         SequenceAndUpdatesOuterClass.RequestGetReferencedEntitites.newBuilder()
                                 .addAllUsers(userOutPeers)
-                                .build()
-                )
+                                .build())
+
         ).thenComposeAsync(res -> {
             Map<Integer, UsersOuterClass.User> users = new HashMap<>();
             res.getUsersList().forEach(u -> users.put(u.getId(), u));

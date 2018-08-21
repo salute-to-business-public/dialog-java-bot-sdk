@@ -11,15 +11,19 @@ import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
 
+import javax.annotation.Nonnull;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Api class for all the interactive requests, subscribtions
+ */
 public class InteractiveApi {
 
     private InternalBotApi privateBot;
     private InteractiveEventListener listener = null;
 
-    public InteractiveApi(InternalBotApi privateBot) {
+    InteractiveApi(InternalBotApi privateBot) {
 
         this.privateBot = privateBot;
 
@@ -35,20 +39,25 @@ public class InteractiveApi {
         });
     }
 
+    /**
+     * Subscribe on interactive events
+     *
+     * @param listener - listener callback
+     */
+    @SuppressWarnings("unused")
     public void onEvent(InteractiveEventListener listener) {
         this.listener = listener;
     }
 
-    private void onEventInternal(InteractiveEvent event) {
-        if (listener != null) {
-            listener.onEvent(event);
-            return;
-        }
-
-        System.out.println("Got an event");
-    }
-
-    public CompletableFuture<UUID> send(Peer peer, InteractiveGroup group) {
+    /**
+     * Send an interactive action group to particular peer
+     *
+     * @param peer  - the address peer user/channel/group
+     * @param group - group of interactive elements
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    @SuppressWarnings("unused")
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group) {
 
         RequestSendMessage request = RequestSendMessage.newBuilder()
                 .setRid(MsgUtils.uniqueCurrentTimeMS())
@@ -61,7 +70,15 @@ public class InteractiveApi {
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
     }
 
-    public CompletableFuture<UUID> update(UUID uuid, InteractiveGroup group) {
+    /**
+     * Update the interactive message, change elements
+     *
+     * @param uuid  - message UUID
+     * @param group - new widgets group
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    @SuppressWarnings("unused")
+    public CompletableFuture<UUID> update(@Nonnull UUID uuid, @Nonnull InteractiveGroup group) {
 
         RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
                 .setMid(UUIDUtils.convertToApi(uuid))
@@ -175,5 +192,14 @@ public class InteractiveApi {
         } else {
             return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DEFAULT;
         }
+    }
+
+    private void onEventInternal(InteractiveEvent event) {
+        if (listener != null) {
+            listener.onEvent(event);
+            return;
+        }
+
+        System.out.println("Got an event");
     }
 }
