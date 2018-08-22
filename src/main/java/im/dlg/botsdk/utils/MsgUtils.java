@@ -1,5 +1,8 @@
 package im.dlg.botsdk.utils;
 
+import dialog.MessagingOuterClass;
+import im.dlg.botsdk.domain.Message;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 public class MsgUtils {
@@ -14,5 +17,13 @@ public class MsgUtils {
             if (LAST_TIME_MS.compareAndSet(lastTime, now))
                 return now;
         }
+    }
+
+    public static Message toMessage(MessagingOuterClass.HistoryMessage hm) {
+        return new Message(
+                PeerUtils.toDomainPeer(hm.getSenderPeer()),
+                PeerUtils.toDomainPeer(hm.getSenderPeer()),
+                UUIDUtils.convert(hm.getMid()),
+                hm.getMessage().getTextMessage().getText(), hm.getDate());
     }
 }

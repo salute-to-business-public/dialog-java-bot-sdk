@@ -10,15 +10,18 @@ import dialog.Peers;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.light.MessageListener;
+import im.dlg.botsdk.utils.Constants;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class MessagingApi {
 
@@ -98,6 +101,40 @@ public class MessagingApi {
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
     }
 
+
+    /**
+     * Load history of messages in a chat
+     *
+     * @param peer      - peer chat
+     * @param date      - date from
+     * @param limit     - size of message batch
+     * @param direction - direction
+     * @return future with messages list
+     */
+    public CompletableFuture<List<Message>> load(Peer peer, long date, int limit, Direction direction) {
+
+        MessagingOuterClass.RequestLoadHistory.Builder request =
+                MessagingOuterClass.RequestLoadHistory.newBuilder()
+                        .setPeer(PeerUtils.toServerOutPeer(peer))
+                        .setDate(date).setLimit(limit)
+                        .addAllOptimizations(Constants.OPTIMISATIONS);
+
+        if (direction == Direction.FORWARD) {
+            request.setLoadMode(MessagingOuterClass.ListLoadMode.LISTLOADMODE_FORWARD);
+        } else if (direction == Direction.BACKWARD) {
+            request.setLoadMode(MessagingOuterClass.ListLoadMode.LISTLOADMODE_BACKWARD);
+        } else if (direction == Direction.BOTH) {
+            request.setLoadMode(MessagingOuterClass.ListLoadMode.LISTLOADMODE_BOTH);
+        }
+
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
+                stub -> stub.loadHistory(request.build())
+        ).thenApplyAsync(resp -> resp.getHistoryList().stream()
+                .map(MsgUtils::toMessage).collect(Collectors.toList()));
+    }
+
     /**
      * Marking a message and all previous as read
      *
@@ -123,5 +160,11 @@ public class MessagingApi {
         }
 
         System.out.println("Got a message");
+    }
+
+    public enum Direction {
+        FORWARD,
+        BACKWARD,
+        BOTH
     }
 }
