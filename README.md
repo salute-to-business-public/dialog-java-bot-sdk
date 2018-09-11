@@ -8,3 +8,5 @@ Dialog Java Bot SDK.
 [API Reference](https://botapi.dlg.im/overview-summary.html)
 
 [Example](https://github.com/dialogs/java-bot-sdk/tree/master/examples)
+
+[Community chat](https://dlg.im/@botsfordialog)
