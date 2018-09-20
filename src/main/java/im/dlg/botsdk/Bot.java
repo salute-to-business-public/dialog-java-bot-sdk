@@ -3,6 +3,8 @@ package im.dlg.botsdk;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -24,7 +26,7 @@ public class Bot {
     private Bot(String token) {
         this.token = token;
 
-        this.config = ConfigFactory.load().getConfig("dialog.botsdk");
+        this.config = ConfigFactory.load("dialog.conf").getConfig("dialog.botsdk");
         this.executor = new DialogExecutor(4);
     }
 

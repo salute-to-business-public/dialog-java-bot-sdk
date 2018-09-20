@@ -1,6 +1,7 @@
 package im.dlg.botsdk.utils;
 
 import dialog.MessagingOuterClass;
+import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.Message;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,6 +25,7 @@ public class MsgUtils {
                 PeerUtils.toDomainPeer(hm.getSenderPeer()),
                 PeerUtils.toDomainPeer(hm.getSenderPeer()),
                 UUIDUtils.convert(hm.getMid()),
-                hm.getMessage().getTextMessage().getText(), hm.getDate());
+                hm.getMessage().getTextMessage().getText(), hm.getDate(),
+                Content.fromMessage(hm.getMessage()));
     }
 }

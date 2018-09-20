@@ -11,6 +11,7 @@ import dialog.MessagingOuterClass.Dialog;
 import dialog.MessagingOuterClass.HistoryMessage;
 import dialog.MessagingOuterClass.ListLoadMode;
 import dialog.MessagingOuterClass.RequestLoadDialogs;
+import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.light.UpdateListener;
 import im.dlg.botsdk.utils.Constants;
@@ -180,7 +181,8 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
                         PeerUtils.toDomainPeer(peer),
                         PeerUtils.toDomainPeer(hm.getSenderPeer()),
                         UUIDUtils.convert(hm.getMid()),
-                        hm.getMessage().getTextMessage().getText(), hm.getDate()
+                        hm.getMessage().getTextMessage().getText(), hm.getDate(),
+                        Content.fromMessage(hm.getMessage())
                 ));
             }
 
