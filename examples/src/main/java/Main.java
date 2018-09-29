@@ -6,7 +6,7 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
 
-        Bot bot = Bot.start("76046c2bff10a0fe6a9c101d1156d340ef664fd6").get();
+        Bot bot = Bot.start("291d6f4dc82d12efe3bf6eceb2cecc7b1a4aaf1f").get();
 
         bot.messaging().onMessage(message ->
                 bot.users().get(message.getSender()).thenAccept(userOpt -> userOpt.ifPresent(user -> {
