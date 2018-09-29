@@ -1,69 +1,21 @@
 package im.dlg.botsdk.utils;
 
-import com.google.protobuf.ByteString;
 import dialog.Definitions;
 
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.UUID;
 
 public class UUIDUtils {
-    public static class BotSdkInvalidArgumentException extends RuntimeException {
-        public BotSdkInvalidArgumentException(String message) {
-            super(message);
-        }
-    }
 
     public static UUID convert(Definitions.UUIDValue value) {
-        byte[] bytes = value.getValue().toByteArray();
-        if (bytes.length == 16) {
-            return new UUID(
-                    longFromBytes(Arrays.copyOfRange(bytes, 0, 8)),
-                    longFromBytes(Arrays.copyOfRange(bytes, 8, 16))
-            );
-        } else {
-            throw new BotSdkInvalidArgumentException("Can't convert value to UUID");
-        }
+        return new UUID(value.getMsb(), value.getLsb());
     }
 
     public static Definitions.UUIDValue convertToApi(UUID uuid) {
-        return Definitions.UUIDValue.newBuilder().
-                setValue(ByteString.copyFrom(longsToBytes(uuid.getMostSignificantBits(),
-                        uuid.getLeastSignificantBits()))).build();
-    }
-
-    private static long longFromBytes(byte[] bytes) {
-        long value = 0L;
-        int i = 0;
-
-        while (i < 8) {
-            value = (value << 8) + (bytes[i] & 0xff);
-            i++;
-        }
-
-        return value;
-    }
-
-    private static byte[] longsToBytes(long v1, long v2) {
-        byte[] bytes = new byte[16];
-        int i = 15;
-        int j = 1;
-        long v = v2;
-
-        while (j > -1) {
-            if (j == 0) v = v1;
-
-            while (i >= j * 8) {
-                bytes[i] = Long.valueOf(v & 0xFF).byteValue();
-                v >>= 8;
-                i--;
-            }
-
-            j--;
-        }
-
-        return bytes;
+        return Definitions.UUIDValue.newBuilder()
+                .setMsb(uuid.getMostSignificantBits())
+                .setLsb(uuid.getLeastSignificantBits()).build();
     }
 
     private static final long START_EPOCH = makeEpoch();
