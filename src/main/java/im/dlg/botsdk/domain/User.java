@@ -20,8 +20,13 @@ public class User {
     private Sex sex;
     private String language;
     private String timeZone;
+    private String customProfile;
 
     public User(Peer peer, String name, String nick, Sex sex, String about, String language, String timeZone) {
+        this(peer, name, nick, sex, about, language, timeZone, null);
+    }
+
+    public User(Peer peer, String name, String nick, Sex sex, String about, String language, String timeZone, String customProfile) {
         this.peer = peer;
         this.name = name;
         this.nick = nick;
@@ -29,6 +34,7 @@ public class User {
         this.sex = sex;
         this.language = language;
         this.timeZone = timeZone;
+        this.customProfile = customProfile;
     }
 
     public Peer getPeer() {
@@ -57,6 +63,10 @@ public class User {
 
     public String getTimeZone() {
         return timeZone;
+    }
+
+    public String getCustomProfile() {
+        return customProfile;
     }
 
     @Override
