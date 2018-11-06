@@ -2,6 +2,8 @@ package im.dlg.botsdk.domain;
 
 import java.util.UUID;
 
+import im.dlg.botsdk.domain.content.Content;
+
 public class Message {
 
     private Peer peer;
@@ -9,13 +11,15 @@ public class Message {
     private UUID messageId;
     private String text;
     private long date;
+    private Content messageContent;
 
-    public Message(Peer peer, Peer sender, UUID messageId, String text, long date) {
+    public Message(Peer peer, Peer sender, UUID messageId, String text, long date, Content messageContent) {
         this.peer = peer;
         this.sender = sender;
         this.messageId = messageId;
         this.text = text;
         this.date = date;
+        this.messageContent = messageContent;
     }
 
     public Peer getPeer() {
@@ -36,6 +40,10 @@ public class Message {
 
     public long getDate() {
         return date;
+    }
+
+    public Content getMessageContent() {
+        return messageContent;
     }
 
     @Override

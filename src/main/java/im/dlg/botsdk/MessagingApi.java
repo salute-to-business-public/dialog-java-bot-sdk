@@ -1,27 +1,30 @@
 package im.dlg.botsdk;
 
-import dialog.MessagingGrpc;
-import dialog.MessagingOuterClass;
-import dialog.MessagingOuterClass.MessageContent;
-import dialog.MessagingOuterClass.RequestSendMessage;
-import dialog.MessagingOuterClass.TextMessage;
-import dialog.MessagingOuterClass.UpdateMessage;
-import dialog.Peers;
-import im.dlg.botsdk.domain.Message;
-import im.dlg.botsdk.domain.Peer;
-import im.dlg.botsdk.light.MessageListener;
-import im.dlg.botsdk.utils.Constants;
-import im.dlg.botsdk.utils.MsgUtils;
-import im.dlg.botsdk.utils.PeerUtils;
-import im.dlg.botsdk.utils.UUIDUtils;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import dialog.MessagingGrpc;
+import dialog.MessagingOuterClass;
+import dialog.MessagingOuterClass.MessageContent;
+import dialog.MessagingOuterClass.RequestSendMessage;
+import dialog.MessagingOuterClass.UpdateMessage;
+import dialog.Peers;
+import im.dlg.botsdk.domain.Message;
+import im.dlg.botsdk.domain.Peer;
+import im.dlg.botsdk.domain.content.Content;
+import im.dlg.botsdk.domain.content.DocumentContent;
+import im.dlg.botsdk.light.MessageListener;
+import im.dlg.botsdk.utils.Constants;
+import im.dlg.botsdk.utils.MsgUtils;
+import im.dlg.botsdk.utils.PeerUtils;
+import im.dlg.botsdk.utils.UUIDUtils;
 
 public class MessagingApi {
 
@@ -45,7 +48,7 @@ public class MessagingApi {
                                                 onReceiveMessage(new Message(
                                                         PeerUtils.toDomainPeer(outPeer),
                                                         PeerUtils.toDomainPeer(senderOutPeer),
-                                                        uuid, text, msg.getDate()));
+                                                        uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
                                             })
                                     );
                         });
@@ -67,28 +70,17 @@ public class MessagingApi {
     }
 
     /**
-     * see #send
-     */
-    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull String text) {
-        return send(peer, text, null);
-    }
-
-    /**
      * Send message to particular peer
      *
      * @param peer       - the address peer user/channel/group
-     * @param text       - text of message
+     * @param message    - message content
      * @param targetUser - message will be visible only to this UID
      * @return - future with message UUID, that completes when deliver to server
      */
-    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull String text, @Nullable Integer targetUser) {
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
-        MessageContent msg = MessageContent.newBuilder()
-                .setTextMessage(TextMessage.newBuilder().setText(text).build())
-                .build();
-
         RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setRid(MsgUtils.uniqueCurrentTimeMS())
-                .setPeer(outPeer).setMessage(msg);
+                .setPeer(outPeer).setMessage(message);
 
         if (targetUser != null) {
             request.setIsOnlyForUser(targetUser);
@@ -99,6 +91,86 @@ public class MessagingApi {
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.sendMessage(request.build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+    }
+
+    /**
+     * see #sendText
+     */
+    public CompletableFuture<UUID> sendText(@Nonnull Peer peer, @Nonnull String text) {
+        return sendText(peer, text, null);
+    }
+
+    /**
+     * Send plain text to particular peer
+     *
+     * @param peer       - the address peer user/channel/group
+     * @param text       - text of message
+     * @param targetUser - message will be visible only to this UID
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    public CompletableFuture<UUID> sendText(@Nonnull Peer peer, @Nonnull String text, @Nullable Integer targetUser) {
+        MessageContent msg = MessageContent.newBuilder()
+                .setTextMessage(MessagingOuterClass.TextMessage.newBuilder().setText(text).build())
+                .build();
+        return send(peer, msg, targetUser);
+    }
+
+    /**
+     * see #sendMedia
+     */
+    public CompletableFuture<UUID> sendMedia(@Nonnull Peer peer,
+                                             @Nonnull List<MessagingOuterClass.MessageMedia> medias) {
+        return sendMedia(peer, medias, null);
+    }
+
+    /**
+     * Send media message to particular peer
+     *
+     * @param peer       - the address peer user/channel/group
+     * @param medias     - media attachments
+     * @param targetUser - message will be visible only to this UID
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    public CompletableFuture<UUID> sendMedia(@Nonnull Peer peer,
+                                             @Nonnull List<MessagingOuterClass.MessageMedia> medias,
+                                             @Nullable Integer targetUser) {
+        MessagingOuterClass.TextMessage.Builder textMessage = MessagingOuterClass.TextMessage
+                .newBuilder();
+        IntStream.range(0, medias.size())
+                .forEach(index ->
+                        textMessage.setMedia(index, medias.get(index)));
+
+        MessageContent msg = MessageContent.newBuilder()
+                .setTextMessage(textMessage.build())
+                .build();
+        return send(peer, msg, targetUser);
+    }
+
+    /**
+     * see #sendDocument
+     */
+    public CompletableFuture<UUID> sendDocument(@Nonnull Peer peer,
+                                                @Nonnull DocumentContent document) {
+        return sendDocument(peer, document, null);
+    }
+
+    /**
+     * Send document message to particular peer
+     *
+     * @param peer       - the address peer user/channel/group
+     * @param document   - document/video attachment
+     * @param targetUser - message will be visible only to this UID
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    public CompletableFuture<UUID> sendDocument(@Nonnull Peer peer,
+                                             @Nonnull DocumentContent document,
+                                             @Nullable Integer targetUser) {
+        MessagingOuterClass.DocumentMessage documentMessage = DocumentContent.createDocumentMessage(document);
+
+        MessageContent msg = MessageContent.newBuilder()
+                .setDocumentMessage(documentMessage)
+                .build();
+        return send(peer, msg, targetUser);
     }
 
 
