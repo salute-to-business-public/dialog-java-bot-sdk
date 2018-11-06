@@ -65,7 +65,8 @@ public class UsersApi {
                 UsersOuterClass.User u = users.get(fu.getId());
                 return new User(peerMap.get(fu.getId()), u.getName(), u.getNick().getValue(),
                         User.Sex.fromServerModel(u.getSex()), fu.getAbout().getValue(),
-                        fu.getPreferredLanguages(0), fu.getTimeZone().getValue()
+                        fu.getPreferredLanguages(0), fu.getTimeZone().getValue(),
+                        fu.getCustomProfile()
                 );
             }).collect(Collectors.toList()), privateBot.executor.getExecutor());
         }, privateBot.executor.getExecutor());
