@@ -242,7 +242,6 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
 
             for (Map.Entry<Class, List<UpdateListener>> entry : subscribers.entrySet()) {
                 if (updateRaw.getClass().isAssignableFrom(entry.getKey())) {
-                    entry.getValue().forEach(listener -> System.out.println(listener));
                     entry.getValue().forEach(listener -> listener.onUpdate(up));
                 }
             }
