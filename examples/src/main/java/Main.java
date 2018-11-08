@@ -9,7 +9,7 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
 
-        Bot bot = Bot.start("291d6f4dc82d12efe3bf6eceb2cecc7b1a4aaf1f").get();
+        Bot bot = Bot.start("cbb4994cabfa8d2a5bce0b5f7a44c23da943f767").get();
 
         bot.messaging().onMessage(message ->
                 bot.users().get(message.getSender()).thenAccept(userOpt -> userOpt.ifPresent(user -> {
@@ -22,7 +22,7 @@ public class Main {
                                 bot.messaging().sendDocument(message.getPeer(), (DocumentContent) message.getMessageContent());
                             } else {
 //                                bot.interactiveApi().send(message.getPeer())
-                                bot.interactiveApi().send(message.getPeer(), new InteractiveGroup())
+//                                bot.interactiveApi().send(message.getPeer(), new InteractiveGroup())
                             }
                             return null;
                         }

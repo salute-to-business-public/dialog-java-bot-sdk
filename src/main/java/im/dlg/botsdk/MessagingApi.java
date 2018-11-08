@@ -37,23 +37,30 @@ public class MessagingApi {
 
         privateBot.subscribeOn(UpdateMessage.class, msg -> {
             try {
-                if (msg.getMessage().getBodyCase().getNumber() == 1) {
-                    privateBot.findOutPeer(msg.getPeer()).thenAccept(optOutPeer -> {
-                        optOutPeer.ifPresent(outPeer -> {
-                            privateBot.loadSenderOutPeer(msg.getSenderUid(), outPeer, msg.getDate())
-                                    .thenAcceptAsync(optSenderOutPeer ->
-                                            optSenderOutPeer.ifPresent(senderOutPeer -> {
-                                                final String text = msg.getMessage().getTextMessage().getText();
-                                                final UUID uuid = UUIDUtils.convert(msg.getMid());
-                                                onReceiveMessage(new Message(
-                                                        PeerUtils.toDomainPeer(outPeer),
-                                                        PeerUtils.toDomainPeer(senderOutPeer),
-                                                        uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
-                                            })
-                                    );
-                        });
-                    });
+                String _text = "";
+
+                if (msg.getMessage().hasTextMessage()) {
+                    _text = msg.getMessage().getTextMessage().getText();
+                } else if (msg.getMessage().hasDocumentMessage()) {
+                    _text = String.valueOf(msg.getMessage().getDocumentMessage().getFileId());
                 }
+
+                final String text = _text;
+
+                privateBot.findOutPeer(msg.getPeer()).thenAccept(optOutPeer -> {
+                    optOutPeer.ifPresent(outPeer -> {
+                        privateBot.loadSenderOutPeer(msg.getSenderUid(), outPeer, msg.getDate())
+                                .thenAcceptAsync(optSenderOutPeer ->
+                                        optSenderOutPeer.ifPresent(senderOutPeer -> {
+                                            final UUID uuid = UUIDUtils.convert(msg.getMid());
+                                            onReceiveMessage(new Message(
+                                                    PeerUtils.toDomainPeer(outPeer),
+                                                    PeerUtils.toDomainPeer(senderOutPeer),
+                                                    uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
+                                        })
+                                );
+                    });
+                });
             } catch (Throwable throwable) {
                 throwable.printStackTrace();
             }
