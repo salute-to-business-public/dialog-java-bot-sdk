@@ -1,12 +1,10 @@
 package im.dlg.botsdk;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 public class Bot {
 
@@ -19,6 +17,7 @@ public class Bot {
     private MessagingApi messagingApi;
     private UsersApi users;
     private InteractiveApi interactiveApi;
+    private MediaAndFilesApi mediaAndFilesApi;
     private DialogExecutor executor;
 
     private volatile CompletableFuture<Bot> voidCompletableFuture;
@@ -27,6 +26,7 @@ public class Bot {
         this.token = token;
 
         this.config = ConfigFactory.load("dialog.conf").getConfig("dialog.botsdk");
+        //this.config = ConfigFactory.load().getConfig("dialog.botsdk");
         this.executor = new DialogExecutor(4);
     }
 
@@ -47,6 +47,7 @@ public class Bot {
         messagingApi = new MessagingApi(internalBotApi);
         users = new UsersApi(internalBotApi);
         interactiveApi = new InteractiveApi(internalBotApi);
+        mediaAndFilesApi = new MediaAndFilesApi(internalBotApi);
     }
 
     public void await() throws InterruptedException {
@@ -82,5 +83,9 @@ public class Bot {
     public InteractiveApi interactiveApi() {
         lock();
         return interactiveApi;
+    }
+    public MediaAndFilesApi mediaAndFilesApi() {
+        lock();
+        return mediaAndFilesApi;
     }
 }

@@ -3,7 +3,6 @@ import java.util.concurrent.ExecutionException;
 import im.dlg.botsdk.Bot;
 import im.dlg.botsdk.domain.content.DocumentContent;
 import im.dlg.botsdk.domain.content.TextContent;
-import im.dlg.botsdk.domain.interactive.InteractiveGroup;
 
 public class Main {
 
