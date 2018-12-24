@@ -1,5 +1,7 @@
 package im.dlg.botsdk;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -10,12 +12,10 @@ import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import dialog.MessagingGrpc;
-import dialog.MessagingOuterClass;
+import dialog.*;
 import dialog.MessagingOuterClass.MessageContent;
 import dialog.MessagingOuterClass.RequestSendMessage;
 import dialog.MessagingOuterClass.UpdateMessage;
-import dialog.Peers;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.content.Content;
@@ -25,6 +25,11 @@ import im.dlg.botsdk.utils.Constants;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
+import org.javatuples.Pair;
+
+import static dialog.MediaAndFilesOuterClass.*;
+import static dialog.MessagingOuterClass.*;
+import static org.asynchttpclient.Dsl.*;
 
 public class MessagingApi {
 
@@ -108,6 +113,73 @@ public class MessagingApi {
     }
 
     /**
+     * Sending a file to peer
+     *
+     *
+     * @param peer - address peer
+     * @param file - java file reference
+     *
+     * @return UUID - message id
+     */
+    public CompletableFuture<UUID> sendFile(@Nonnull final Peer peer, @Nonnull final File file) {
+
+        if (!file.exists()) {
+            new CompletableFuture<>().completeExceptionally(
+                    new FileNotFoundException("File not found: " + file.getPath()));
+        }
+
+        if (!file.isFile()) {
+            new CompletableFuture<>().completeExceptionally(
+                    new FileNotFoundException("Path is not a file: " + file.getPath()));
+        }
+
+        String fileName = file.getName();
+        int fileSize = (int) file.length();
+
+        RequestGetFileUploadUrl.Builder requestGetUrl = RequestGetFileUploadUrl.newBuilder()
+                .setExpectedSize(fileSize);
+
+        return privateBot
+                .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(1,
+                        TimeUnit.MINUTES), stub -> stub.getFileUploadUrl(requestGetUrl.build())
+                ).thenCompose(responseGetFileUploadUrl -> {
+                    RequestGetFileUploadPartUrl.Builder uploadPart =
+                            RequestGetFileUploadPartUrl.newBuilder().setPartNumber(0).
+                                    setPartSize(fileSize).setUploadKey(responseGetFileUploadUrl.getUploadKey());
+                    return privateBot
+                            .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
+                                    TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
+                            .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
+                }).thenCompose(respPair ->
+                        asyncHttpClient().preparePut(respPair.getValue0())
+                                .setBody(file).execute().toCompletableFuture()
+                                .thenApply(val -> respPair.getValue1())
+                ).thenCompose(uploadKey -> privateBot
+                        .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
+                                TimeUnit.MINUTES), stub ->
+                                stub.commitFileUpload(RequestCommitFileUpload.newBuilder()
+                                        .setFileName(fileName)
+                                        .setUploadKey(uploadKey).build()))
+                        .thenApply(ResponseCommitFileUpload::getUploadedFileLocation)
+                ).thenCompose(fileLocation -> {
+                    DocumentMessage document = DocumentMessage
+                            .newBuilder()
+                            .setFileId(fileLocation.getFileId())
+                            .setAccessHash(fileLocation.getAccessHash())
+                            .setFileSize(fileSize)
+                            .setName(fileName)
+                            .setMimeType("application/octet-stream")
+                            .build();
+
+                    MessageContent msg = MessageContent.newBuilder()
+                            .setDocumentMessage(document)
+                            .build();
+
+                    return send(peer, msg, null);
+                });
+    }
+
+    /**
      * Send plain text to particular peer
      *
      * @param peer       - the address peer user/channel/group
@@ -117,7 +189,7 @@ public class MessagingApi {
      */
     public CompletableFuture<UUID> sendText(@Nonnull Peer peer, @Nonnull String text, @Nullable Integer targetUser) {
         MessageContent msg = MessageContent.newBuilder()
-                .setTextMessage(MessagingOuterClass.TextMessage.newBuilder().setText(text).build())
+                .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
         return send(peer, msg, targetUser);
     }
@@ -126,7 +198,7 @@ public class MessagingApi {
      * see #sendMedia
      */
     public CompletableFuture<UUID> sendMedia(@Nonnull Peer peer,
-                                             @Nonnull List<MessagingOuterClass.MessageMedia> medias) {
+                                             @Nonnull List<MessageMedia> medias) {
         return sendMedia(peer, medias, null);
     }
 
@@ -139,9 +211,9 @@ public class MessagingApi {
      * @return - future with message UUID, that completes when deliver to server
      */
     public CompletableFuture<UUID> sendMedia(@Nonnull Peer peer,
-                                             @Nonnull List<MessagingOuterClass.MessageMedia> medias,
+                                             @Nonnull List<MessageMedia> medias,
                                              @Nullable Integer targetUser) {
-        MessagingOuterClass.TextMessage.Builder textMessage = MessagingOuterClass.TextMessage
+        TextMessage.Builder textMessage = TextMessage
                 .newBuilder();
         IntStream.range(0, medias.size())
                 .forEach(index ->
@@ -170,9 +242,9 @@ public class MessagingApi {
      * @return - future with message UUID, that completes when deliver to server
      */
     public CompletableFuture<UUID> sendDocument(@Nonnull Peer peer,
-                                             @Nonnull DocumentContent document,
-                                             @Nullable Integer targetUser) {
-        MessagingOuterClass.DocumentMessage documentMessage = DocumentContent.createDocumentMessage(document);
+                                                @Nonnull DocumentContent document,
+                                                @Nullable Integer targetUser) {
+        DocumentMessage documentMessage = DocumentContent.createDocumentMessage(document);
 
         MessageContent msg = MessageContent.newBuilder()
                 .setDocumentMessage(documentMessage)
@@ -192,18 +264,18 @@ public class MessagingApi {
      */
     public CompletableFuture<List<Message>> load(Peer peer, long date, int limit, Direction direction) {
 
-        MessagingOuterClass.RequestLoadHistory.Builder request =
-                MessagingOuterClass.RequestLoadHistory.newBuilder()
+        RequestLoadHistory.Builder request =
+                RequestLoadHistory.newBuilder()
                         .setPeer(PeerUtils.toServerOutPeer(peer))
                         .setDate(date).setLimit(limit)
                         .addAllOptimizations(Constants.OPTIMISATIONS);
 
         if (direction == Direction.FORWARD) {
-            request.setLoadMode(MessagingOuterClass.ListLoadMode.LISTLOADMODE_FORWARD);
+            request.setLoadMode(ListLoadMode.LISTLOADMODE_FORWARD);
         } else if (direction == Direction.BACKWARD) {
-            request.setLoadMode(MessagingOuterClass.ListLoadMode.LISTLOADMODE_BACKWARD);
+            request.setLoadMode(ListLoadMode.LISTLOADMODE_BACKWARD);
         } else if (direction == Direction.BOTH) {
-            request.setLoadMode(MessagingOuterClass.ListLoadMode.LISTLOADMODE_BOTH);
+            request.setLoadMode(ListLoadMode.LISTLOADMODE_BOTH);
         }
 
         return privateBot.withToken(
@@ -222,7 +294,7 @@ public class MessagingApi {
      * @return a future
      */
     public CompletableFuture<Void> read(@Nonnull Peer peer, long date) {
-        MessagingOuterClass.RequestMessageRead request = MessagingOuterClass.RequestMessageRead.newBuilder()
+        RequestMessageRead request = RequestMessageRead.newBuilder()
                 .setPeer(PeerUtils.toServerOutPeer(peer)).setDate(date).build();
 
         return privateBot.withToken(
