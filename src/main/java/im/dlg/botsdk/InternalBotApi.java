@@ -58,8 +58,8 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
                 RegistrationGrpc.newFutureStub(channel.getChannel()).registerDevice(
                         RegistrationOuterClass.RequestRegisterDevice.newBuilder()
                                 .setAppId(appId)
-                                .setAppTitle("BotSdk")
-                                .setDeviceTitle(deviceTitle)
+                                .setAppTitle(this.botConfig.getBotName())
+                                .setDeviceTitle(this.botConfig.getBotName())
                                 .build()
                 )
         ).whenCompleteAsync((res, t) -> {

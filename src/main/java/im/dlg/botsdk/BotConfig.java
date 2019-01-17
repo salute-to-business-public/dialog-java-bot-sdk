@@ -8,14 +8,16 @@ public class BotConfig {
     final private String token;
     final private String certPath;
     final private String certPassword;
+    final private String botName;
 
-    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword) {
+    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, String botName) {
         this.host = host;
         this.port = port;
         this.isSecure = isSecure;
         this.token = token;
         this.certPath = certPath;
         this.certPassword = certPassword;
+        this.botName = botName;
     }
 
     public String getHost() {
@@ -42,6 +44,10 @@ public class BotConfig {
         return certPassword;
     }
 
+    public String getBotName() {
+        return botName;
+    }
+
     public static final class Builder {
         String host;
         int port;
@@ -49,6 +55,7 @@ public class BotConfig {
         String token;
         String certPath;
         String certPassword;
+        String botName = "JavaBot";
 
         public Builder() {
         }
@@ -87,8 +94,13 @@ public class BotConfig {
             return this;
         }
 
+        public Builder withBotName(String botName) {
+            this.botName = botName;
+            return this;
+        }
+
         public BotConfig build() {
-            return new BotConfig(host, port, isSecure, token, certPath, certPassword);
+            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName);
         }
     }
 }
