@@ -1,16 +1,13 @@
 package im.dlg.botsdk;
 
+import im.dlg.botsdk.utils.NetUtils;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 
-import javax.net.ssl.KeyManagerFactory;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.security.KeyStore;
 import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
@@ -38,7 +35,8 @@ public class ChannelWrapper {
 
                 SslContext sslContext =
                         GrpcSslContexts.forClient()
-                                .keyManager(createKeyFactory(new File(botConfig.getCertPath()), botConfig.getCertPassword()))
+                                .keyManager(NetUtils.createKeyFactory(new File(botConfig.getCertPath()),
+                                        botConfig.getCertPassword()))
                                 .build();
 
                 nettyChannelBuilder = nettyChannelBuilder.sslContext(sslContext)
@@ -58,19 +56,5 @@ public class ChannelWrapper {
 
     public synchronized ManagedChannel getChannel() {
         return channel;
-    }
-
-    private KeyManagerFactory createKeyFactory(File pKeyFile, String pKeyPassword) throws Exception {
-
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
-        KeyStore keyStore = KeyStore.getInstance("PKCS12");
-
-        InputStream keyInput = new FileInputStream(pKeyFile);
-        keyStore.load(keyInput, pKeyPassword.toCharArray());
-        keyInput.close();
-
-        keyManagerFactory.init(keyStore, pKeyPassword.toCharArray());
-
-        return keyManagerFactory;
     }
 }

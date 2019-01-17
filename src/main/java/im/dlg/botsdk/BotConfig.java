@@ -1,5 +1,8 @@
 package im.dlg.botsdk;
 
+/**
+ * Main configuration file
+ */
 public class BotConfig {
     final private String host;
     final private int port;
@@ -20,30 +23,51 @@ public class BotConfig {
         this.botName = botName;
     }
 
+    /**
+     * Server host for connection without scheme, ex: server.amazon.com
+     */
     public String getHost() {
         return host;
     }
 
+    /**
+     * Port for connection
+     */
     public int getPort() {
         return port;
     }
 
+    /**
+     * Use TLS or not
+     */
     public boolean isSecure() {
         return isSecure;
     }
 
+    /**
+     * Token for bot auth
+     */
     public String getToken() {
         return token;
     }
 
+    /**
+     * Absolute location of client cert for Mutual auth in .p12 or pfx format
+     */
     public String getCertPath() {
         return certPath;
     }
 
+    /**
+     * A password for certificate container
+     */
     public String getCertPassword() {
         return certPassword;
     }
 
+    /**
+     * Used as application name
+     */
     public String getBotName() {
         return botName;
     }

@@ -37,34 +37,58 @@ public class User {
         this.customProfile = customProfile;
     }
 
+    /**
+     * @return The peer, related to user
+     */
     public Peer getPeer() {
         return peer;
     }
 
+    /**
+     * @return The name of user
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * @return Nickname
+     */
     public String getNick() {
         return nick;
     }
 
+    /**
+     * @return About string info
+     */
     public String getAbout() {
         return about;
     }
 
+    /**
+     * @return user sex
+     */
     public Sex getSex() {
         return sex;
     }
 
+    /**
+     * @return user lang
+     */
     public String getLanguage() {
         return language;
     }
 
+    /**
+     * @return user timezone
+     */
     public String getTimeZone() {
         return timeZone;
     }
 
+    /**
+     * @return Json string of custom profile
+     */
     public String getCustomProfile() {
         return customProfile;
     }

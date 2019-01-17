@@ -31,6 +31,12 @@ public class Bot {
     }
 
 
+    /**
+     * Launches the bot with token auth, the remaining configuration should go from config file
+     *
+     * @param token the token, received from parent bot or admin console
+     * @return Future that completes when bot authorised
+     */
     public static CompletableFuture<Bot> start(String token) {
         Config config = ConfigFactory.load("dialog.conf").getConfig("dialog.botsdk");
 
@@ -48,6 +54,12 @@ public class Bot {
         return instance.voidCompletableFuture;
     }
 
+    /**
+     * Launches the bot with full config
+     *
+     * @param botConfig the constructed config object
+     * @return Future that completes when bot authorised
+     */
     public static CompletableFuture<Bot> start(BotConfig botConfig) {
         Bot instance = new Bot();
         instance.internalBotApi = new InternalBotApi(botConfig, instance.executor);
@@ -66,12 +78,20 @@ public class Bot {
         mediaAndFilesApi = new MediaAndFilesApi(internalBotApi);
     }
 
+    /**
+     * Method to block execution
+     *
+     * @throws InterruptedException
+     */
     public void await() throws InterruptedException {
         synchronized (stopLock) {
             stopLock.wait();
         }
     }
 
+    /**
+     * Stops the bot
+     */
     public void stop() {
         synchronized (stopLock) {
             stopLock.notifyAll();
@@ -86,21 +106,33 @@ public class Bot {
         }
     }
 
+    /**
+     * @return the object to interact with messaging
+     */
     public MessagingApi messaging() {
         lock();
         return messagingApi;
     }
 
+    /**
+     * @return the object to interact with users
+     */
     public UsersApi users() {
         lock();
         return users;
     }
 
+    /**
+     * @return the object to interact with buttons/select menus
+     */
     public InteractiveApi interactiveApi() {
         lock();
         return interactiveApi;
     }
 
+    /**
+     * @return the object to interact with different media files
+     */
     public MediaAndFilesApi mediaAndFilesApi() {
         lock();
         return mediaAndFilesApi;

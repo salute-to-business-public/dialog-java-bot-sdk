@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
+// TODO: extract StreamObserver to different object
 class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
 
     DialogExecutor executor;
@@ -48,7 +49,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
         this.channel = new ChannelWrapper(this.botConfig);
     }
 
-    public CompletableFuture<Void> start() {
+    CompletableFuture<Void> start() {
 
         channel.connect();
         String deviceTitle = "BotWithToken";

@@ -9,10 +9,7 @@ import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.content.DocumentContent;
 import im.dlg.botsdk.light.MessageListener;
-import im.dlg.botsdk.utils.Constants;
-import im.dlg.botsdk.utils.MsgUtils;
-import im.dlg.botsdk.utils.PeerUtils;
-import im.dlg.botsdk.utils.UUIDUtils;
+import im.dlg.botsdk.utils.*;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
@@ -20,12 +17,8 @@ import org.javatuples.Pair;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.net.ssl.KeyManagerFactory;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.security.KeyStore;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +29,9 @@ import java.util.stream.IntStream;
 import static dialog.MediaAndFilesOuterClass.*;
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
+/**
+ * Central class for messaging API
+ */
 public class MessagingApi {
 
     private InternalBotApi privateBot;
@@ -120,10 +116,8 @@ public class MessagingApi {
     /**
      * Sending a file to peer
      *
-     *
      * @param peer - address peer
      * @param file - java file reference
-     *
      * @return UUID - message id
      */
     public CompletableFuture<UUID> sendFile(@Nonnull final Peer peer, @Nonnull final File file) {
@@ -149,7 +143,7 @@ public class MessagingApi {
                 && privateBot.botConfig.getCertPassword() != null) {
             try {
                 SslContext sslContext = SslContextBuilder.forClient()
-                        .keyManager(createSSLFactory(new File(privateBot.botConfig.getCertPath()),
+                        .keyManager(NetUtils.createKeyFactory(new File(privateBot.botConfig.getCertPath()),
                                 privateBot.botConfig.getCertPassword())).build();
                 builder.setSslContext(sslContext);
 
@@ -196,19 +190,6 @@ public class MessagingApi {
 
                     return send(peer, msg, null);
                 });
-    }
-
-    private KeyManagerFactory createSSLFactory(File pKeyFile, String pKeyPassword) throws Exception {
-
-        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
-        KeyStore keyStore = KeyStore.getInstance("PKCS12");
-
-        InputStream keyInput = new FileInputStream(pKeyFile);
-        keyStore.load(keyInput, pKeyPassword.toCharArray());
-        keyInput.close();
-
-        keyManagerFactory.init(keyStore, pKeyPassword.toCharArray());
-        return keyManagerFactory;
     }
 
     /**

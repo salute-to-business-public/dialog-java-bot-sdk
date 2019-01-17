@@ -2,6 +2,9 @@ package im.dlg.botsdk.domain;
 
 import java.util.UUID;
 
+/**
+ * Event that happens when user interact to button/select menu
+ */
 public class InteractiveEvent {
 
     private UUID mid;
@@ -16,18 +19,30 @@ public class InteractiveEvent {
         this.peer = peer;
     }
 
+    /**
+     * @return message id of source interactive element
+     */
     public UUID getMid() {
         return mid;
     }
 
+    /**
+     * @return id of interactive widget
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * @return the value of button/selection menu
+     */
     public String getValue() {
         return value;
     }
 
+    /**
+     * @return peer entity of user, who interact
+     */
     public Peer getPeer() {
         return peer;
     }

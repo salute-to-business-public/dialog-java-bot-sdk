@@ -10,6 +10,9 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+/**
+ * Api to load user info
+ */
 public class UsersApi {
 
     private InternalBotApi privateBot;

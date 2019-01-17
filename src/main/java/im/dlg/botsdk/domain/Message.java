@@ -4,6 +4,9 @@ import java.util.UUID;
 
 import im.dlg.botsdk.domain.content.Content;
 
+/**
+ * Message entity for any content
+ */
 public class Message {
 
     private Peer peer;
@@ -22,26 +25,44 @@ public class Message {
         this.messageContent = messageContent;
     }
 
+    /**
+     * @return Chat peer of message
+     */
     public Peer getPeer() {
         return peer;
     }
 
+    /**
+     * @return Sender peer
+     */
     public Peer getSender() {
         return sender;
     }
 
+    /**
+     * @return Message unique ID
+     */
     public UUID getMessageId() {
         return messageId;
     }
 
+    /**
+     * @return Text of message
+     */
     public String getText() {
         return text;
     }
 
+    /**
+     * @return Message timestamp
+     */
     public long getDate() {
         return date;
     }
 
+    /**
+     * @return Attachment content
+     */
     public Content getMessageContent() {
         return messageContent;
     }
@@ -53,6 +74,7 @@ public class Message {
                 ", sender=" + sender +
                 ", messageId=" + messageId +
                 ", text='" + text + '\'' +
+                ", date='" + date + '\'' +
                 '}';
     }
 }

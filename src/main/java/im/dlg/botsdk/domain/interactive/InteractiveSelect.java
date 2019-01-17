@@ -3,6 +3,9 @@ package im.dlg.botsdk.domain.interactive;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Selection dropdown
+ */
 public class InteractiveSelect implements InteractiveWidget {
 
     private String label;

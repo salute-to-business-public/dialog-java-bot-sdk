@@ -1,5 +1,8 @@
 package im.dlg.botsdk.domain.interactive;
 
+/**
+ * Option item for selection menu
+ */
 public class InteractiveSelectOption {
     private String value;
     private String label;
@@ -9,10 +12,16 @@ public class InteractiveSelectOption {
         this.label = label;
     }
 
+    /**
+     * @return option label
+     */
     public String getValue() {
         return value;
     }
 
+    /**
+     * @return text label
+     */
     public String getLabel() {
         return label;
     }

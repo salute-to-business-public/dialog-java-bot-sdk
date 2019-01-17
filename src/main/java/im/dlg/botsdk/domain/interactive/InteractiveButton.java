@@ -1,5 +1,8 @@
 package im.dlg.botsdk.domain.interactive;
 
+/**
+ * Button element
+ */
 public class InteractiveButton implements InteractiveWidget {
     private String value;
     private String label;
@@ -9,10 +12,16 @@ public class InteractiveButton implements InteractiveWidget {
         this.label = label;
     }
 
+    /**
+     * @return the value, text indication for element
+     */
     public String getValue() {
         return value;
     }
 
+    /**
+     * @return the text label on button
+     */
     public String getLabel() {
         return label;
     }
