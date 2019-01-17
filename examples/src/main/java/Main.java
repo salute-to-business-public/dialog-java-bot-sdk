@@ -24,15 +24,17 @@ public class Main {
                         })
                 ).thenCompose(aVoid -> {
                             if (message.getText().equals("Send me photo")) {
-                                bot.messaging().sendMedia(message.getPeer(), ((TextContent) message.getMessageContent()).getMedias());
+                                return bot.messaging().sendMedia(message.getPeer(), ((TextContent) message.getMessageContent()).getMedias());
                             } else if (message.getText().equals("Send me video")) {
-                                bot.messaging().sendDocument(message.getPeer(), (DocumentContent) message.getMessageContent());
+                                return bot.messaging().sendDocument(message.getPeer(), (DocumentContent) message.getMessageContent());
                             } else {
                                 return bot.messaging().sendFile(message.getPeer(), new File("/Users/ademin/version"));
                             }
-                            return null;
                         }
-                ).thenAccept(uuid ->
+                ).exceptionally(ex -> {
+                    ex.printStackTrace();
+                    return null;
+                }).thenAccept(uuid ->
                         System.out.println("Sent a message with UUID: " + uuid)));
 
         bot.await();
