@@ -1,21 +1,9 @@
 package im.dlg.botsdk;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import dialog.*;
-import dialog.MessagingOuterClass.MessageContent;
-import dialog.MessagingOuterClass.RequestSendMessage;
-import dialog.MessagingOuterClass.UpdateMessage;
+import dialog.MediaAndFilesGrpc;
+import dialog.MessagingGrpc;
+import dialog.MessagingOuterClass.*;
+import dialog.Peers;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.content.Content;
@@ -25,11 +13,28 @@ import im.dlg.botsdk.utils.Constants;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.javatuples.Pair;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import static dialog.MediaAndFilesOuterClass.*;
-import static dialog.MessagingOuterClass.*;
-import static org.asynchttpclient.Dsl.*;
+import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class MessagingApi {
 
@@ -138,6 +143,20 @@ public class MessagingApi {
 
         RequestGetFileUploadUrl.Builder requestGetUrl = RequestGetFileUploadUrl.newBuilder()
                 .setExpectedSize(fileSize);
+        final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
+
+        if (privateBot.botConfig.getCertPath() != null
+                && privateBot.botConfig.getCertPassword() != null) {
+            try {
+                SslContext sslContext = SslContextBuilder.forClient()
+                        .keyManager(createSSLFactory(new File(privateBot.botConfig.getCertPath()),
+                                privateBot.botConfig.getCertPassword())).build();
+                builder.setSslContext(sslContext);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         return privateBot
                 .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(1,
@@ -151,7 +170,7 @@ public class MessagingApi {
                                     TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
                             .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
                 }).thenCompose(respPair ->
-                        asyncHttpClient().preparePut(respPair.getValue0())
+                        asyncHttpClient(builder).preparePut(respPair.getValue0())
                                 .setBody(file).execute().toCompletableFuture()
                                 .thenApply(val -> respPair.getValue1())
                 ).thenCompose(uploadKey -> privateBot
@@ -177,6 +196,19 @@ public class MessagingApi {
 
                     return send(peer, msg, null);
                 });
+    }
+
+    private KeyManagerFactory createSSLFactory(File pKeyFile, String pKeyPassword) throws Exception {
+
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+
+        InputStream keyInput = new FileInputStream(pKeyFile);
+        keyStore.load(keyInput, pKeyPassword.toCharArray());
+        keyInput.close();
+
+        keyManagerFactory.init(keyStore, pKeyPassword.toCharArray());
+        return keyManagerFactory;
     }
 
     /**

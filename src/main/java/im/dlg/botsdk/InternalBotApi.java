@@ -34,24 +34,24 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
 
     DialogExecutor executor;
     ChannelWrapper channel;
+    BotConfig botConfig;
 
     private volatile Metadata metadata;
     private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private static Integer appId = 11011;
-    private String token;
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
 
-    InternalBotApi(String token, String host, int port, DialogExecutor executor) {
-        this.token = token;
+    InternalBotApi(BotConfig botConfig, DialogExecutor executor) {
+        this.botConfig = botConfig;
         this.executor = executor;
-        this.channel = new ChannelWrapper(host, port);
+        this.channel = new ChannelWrapper(this.botConfig);
     }
 
     public CompletableFuture<Void> start() {
 
         channel.connect();
-        String deviceTitle = "BotWithToken" + token;
+        String deviceTitle = "BotWithToken";
         CompletableFuture<Metadata> meta = new CompletableFuture<>();
 
         return executor.convert(
@@ -74,8 +74,24 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
             } else if (t != null) {
                 meta.completeExceptionally(t);
             }
-        }).thenComposeAsync(res -> meta).thenComposeAsync(m ->
-                executor.convert(withToken(m,
+        }).thenComposeAsync(res -> meta).thenComposeAsync(m -> {
+
+
+            if (botConfig.getCertPath() != null && botConfig.getCertPassword() != null) {
+                return executor.convert(withToken(m,
+                        AuthenticationGrpc.newFutureStub(channel.getChannel()),
+                        stub -> stub.startAnonymousAuth(
+                                AuthenticationOuterClass.RequestStartAnonymousAuth.newBuilder()
+                                        .setApiKey("BotSdk")
+                                        .setAppId(appId)
+                                        .setDeviceTitle(deviceTitle)
+                                        .addPreferredLanguages("RU")
+                                        .setTimeZone(StringValue.newBuilder().setValue("+3").build())
+                                        .build()
+                        )
+                )).thenApplyAsync(res -> new ImmutablePair<>(res.getUser(), m));
+            } else if (botConfig.getToken() != null) {
+                return executor.convert(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel.getChannel()),
                         stub -> stub.startTokenAuth(
                                 AuthenticationOuterClass.RequestStartTokenAuth.newBuilder()
@@ -84,11 +100,14 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
                                         .setDeviceTitle(deviceTitle)
                                         .addPreferredLanguages("RU")
                                         .setTimeZone(StringValue.newBuilder().setValue("+3").build())
-                                        .setToken(token)
+                                        .setToken(botConfig.getToken())
                                         .build()
                         )
-                )).thenApplyAsync(res -> new ImmutablePair<>(res.getUser(), m))
-        ).thenApplyAsync(p -> {
+                )).thenApplyAsync(res -> new ImmutablePair<>(res.getUser(), m));
+            } else {
+                return null;
+            }
+        }).thenApplyAsync(p -> {
 
             withToken(p.getRight(),
                     SequenceAndUpdatesGrpc.newStub(channel.getChannel()),

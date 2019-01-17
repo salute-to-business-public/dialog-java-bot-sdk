@@ -8,8 +8,7 @@ import com.typesafe.config.ConfigFactory;
 
 public class Bot {
 
-    private Config config;
-    private String token;
+    private BotConfig botConfig;
 
     private final Object stopLock = new Object();
 
@@ -22,19 +21,36 @@ public class Bot {
 
     private volatile CompletableFuture<Bot> voidCompletableFuture;
 
-    private Bot(String token) {
-        this.token = token;
-
-        this.config = ConfigFactory.load("dialog.conf").getConfig("dialog.botsdk");
-        //this.config = ConfigFactory.load().getConfig("dialog.botsdk");
+    private Bot() {
         this.executor = new DialogExecutor(4);
     }
 
-    public static CompletableFuture<Bot> start(String token) {
+    private Bot(BotConfig botConfig) {
+        this.botConfig = botConfig;
+        this.executor = new DialogExecutor(4);
+    }
 
-        Bot instance = new Bot(token);
-        instance.internalBotApi = new InternalBotApi(token, instance.config.getString("host"),
-                instance.config.getInt("port"), instance.executor);
+
+    public static CompletableFuture<Bot> start(String token) {
+        Config config = ConfigFactory.load("dialog.conf").getConfig("dialog.botsdk");
+
+        BotConfig botConfig = new BotConfig.Builder().withToken(token)
+                .withHost(config.getString("host"))
+                .withPort(config.getInt("port")).build();
+
+        Bot instance = new Bot(botConfig);
+        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor);
+
+        instance.voidCompletableFuture = instance.internalBotApi.start().thenAccept(v -> {
+            instance.runApis(instance.internalBotApi);
+        }).thenCompose(aVoid -> CompletableFuture.completedFuture(instance));
+
+        return instance.voidCompletableFuture;
+    }
+
+    public static CompletableFuture<Bot> start(BotConfig botConfig) {
+        Bot instance = new Bot();
+        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor);
 
         instance.voidCompletableFuture = instance.internalBotApi.start().thenAccept(v -> {
             instance.runApis(instance.internalBotApi);
@@ -84,6 +100,7 @@ public class Bot {
         lock();
         return interactiveApi;
     }
+
     public MediaAndFilesApi mediaAndFilesApi() {
         lock();
         return mediaAndFilesApi;
