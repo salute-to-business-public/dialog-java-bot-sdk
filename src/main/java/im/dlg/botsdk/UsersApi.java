@@ -74,4 +74,9 @@ public class UsersApi {
             }).collect(Collectors.toList()), privateBot.executor.getExecutor());
         }, privateBot.executor.getExecutor());
     }
+
+    public CompletableFuture<Optional<Peer>> findUserPeer(Integer userId) {
+        return privateBot.findUserOutPeer(userId)
+                .thenApply(u -> u.map(PeerUtils::toDomainPeer));
+    }
 }
