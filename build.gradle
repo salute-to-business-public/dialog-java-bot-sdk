@@ -12,8 +12,8 @@ ext {
     grpcVersion = '1.17.1'
     gitUrl = "https://github.com/dialogs/java-bot-sdk"
     libraryDescription = "Bot SDK for java developers"
-    bintrayUser = hasProperty('bintrayUser') ? bintrayUser : ""
-    bintrayPassword = hasProperty('bintrayPassword') ? bintrayPassword : ""
+    bintrayUser = System.env.bintrayUser != null ? System.env.bintrayUser : ""
+    bintrayPassword = System.env.bintrayPassword != null ? System.env.bintrayPassword : ""
 }
 
 compileJava {
