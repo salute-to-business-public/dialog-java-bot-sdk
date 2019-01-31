@@ -1,13 +1,20 @@
 plugins {
     id 'net.researchgate.release' version '2.8.0'
+    id "com.jfrog.bintray" version "1.8.4"
 }
 
-group 'im.dlg'
-version '1.0-SNAPSHOT'
-
 apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
-ext.grpcVersion = '1.17.1'
+ext {
+    grpcVersion = '1.17.1'
+    gitUrl = "https://github.com/dialogs/java-bot-sdk"
+    libraryDescription = "Bot SDK for java developers"
+    bintrayUser = hasProperty('bintrayUser') ? bintrayUser : ""
+    bintrayPassword = hasProperty('bintrayPassword') ? bintrayPassword : ""
+}
 
 compileJava {
     sourceCompatibility = 1.8
@@ -16,7 +23,49 @@ compileJava {
 
 repositories {
     mavenCentral()
+    jcenter()
     maven { url "http://dialog.bintray.com/maven" }
+}
+
+afterReleaseBuild.dependsOn bintrayUpload
+
+publishing {
+    publications {
+        BotSDKPublication(MavenPublication) {
+            from components.java
+            groupId group
+            artifactId artifactId
+            version version
+        }
+    }
+}
+
+bintray {
+    user = bintrayUser
+    key = bintrayPassword
+    override = false
+    configurations = ['archives']
+
+    pkg {
+        userOrg = 'dialog'
+        repo = 'maven'
+        name = artifactId
+        desc = libraryDescription
+        websiteUrl = 'https://dlg.im'
+        vcsUrl = gitUrl
+        licenses = ["Dialog"]
+        publish = true
+        publicDownloadNumbers = true
+        version {
+            desc = libraryDescription
+            gpg {
+                sign = true //Determines whether to GPG sign the files. The default is false
+                if (hasProperty('bintrayGpgPassword')) {
+                    bintray.pkg.version.gpg.passphrase = bintrayGpgPassword
+                }
+            }
+        }
+    }
 }
 
 dependencies {
