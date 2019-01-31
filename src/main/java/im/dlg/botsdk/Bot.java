@@ -81,7 +81,7 @@ public class Bot {
     /**
      * Method to block execution
      *
-     * @throws InterruptedException
+     * @throws InterruptedException in wrong case
      */
     public void await() throws InterruptedException {
         synchronized (stopLock) {

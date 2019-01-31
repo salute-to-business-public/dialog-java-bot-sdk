@@ -107,7 +107,11 @@ public class MessagingApi {
     }
 
     /**
-     * see #sendText
+     * Send plain text to particular peer
+     *
+     * @param peer - the address peer user/channel/group
+     * @param text - text of message
+     * @return - future with message UUID, that completes when deliver to server
      */
     public CompletableFuture<UUID> sendText(@Nonnull Peer peer, @Nonnull String text) {
         return sendText(peer, text, null);
@@ -208,7 +212,10 @@ public class MessagingApi {
     }
 
     /**
-     * see #sendMedia
+     * @param peer   - the address peer user/channel/group
+     * @param medias - media attachments
+     * @return - future with message UUID, that completes when deliver to server
+     * @see #sendMedia(Peer, List, Integer)
      */
     public CompletableFuture<UUID> sendMedia(@Nonnull Peer peer,
                                              @Nonnull List<MessageMedia> medias) {
@@ -239,7 +246,11 @@ public class MessagingApi {
     }
 
     /**
-     * see #sendDocument
+     * Send document message to particular peer
+     *
+     * @param peer     - the address peer user/channel/group
+     * @param document - document/video attachment
+     * @return - future with message UUID, that completes when deliver to server
      */
     public CompletableFuture<UUID> sendDocument(@Nonnull Peer peer,
                                                 @Nonnull DocumentContent document) {

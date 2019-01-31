@@ -36,12 +36,13 @@ public class MediaAndFilesApi {
 
     /**
      * Uploads a file to server
-     * 
+     *
      * @param file     - file to upload
      * @param mimeType - file mime type
      * @return A CompletableFuture for FileLocation on server side (FileLocation for
-     *         Dialog internal api)
-     * @throws InterruptedException, ExecutionException
+     * Dialog internal api)
+     * @throws InterruptedException in concurrency issues
+     * @throws ExecutionException   in concurrency issues
      */
     public CompletableFuture<FileLocation> upLoadFile(@Nonnull File file, @Nonnull String mimeType)
             throws InterruptedException, ExecutionException {
@@ -82,10 +83,11 @@ public class MediaAndFilesApi {
 
     /**
      * Get Url to download a file from server
-     * 
+     *
      * @param fileLoc - file location (dialog internal API)
      * @return - A CompletableFuture for a String containing download url
-     * @throws InterruptedException, ExecutionException
+     * @throws InterruptedException in concurrency issues
+     * @throws ExecutionException in concurrency issues
      */
     public CompletableFuture<String> getFileUrl(FileLocation fileLoc) throws InterruptedException, ExecutionException {
         return privateBot
@@ -98,7 +100,7 @@ public class MediaAndFilesApi {
 
     /**
      * Helper function to perform HTPP PUT request from a file to server
-     * 
+     *
      * @param file      - file to upload
      * @param upLoadUrl - url to execute PUT request on server
      * @param mimeType  - mime type of the file
