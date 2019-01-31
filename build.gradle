@@ -44,7 +44,7 @@ bintray {
     user = bintrayUser
     key = bintrayPassword
     override = false
-    configurations = ['archives']
+    configurations = ['BotSDKPublication']
 
     pkg {
         userOrg = 'dialog'
@@ -53,8 +53,8 @@ bintray {
         desc = libraryDescription
         websiteUrl = 'https://dlg.im'
         vcsUrl = gitUrl
-        licenses = ["Dialog"]
-        publish = true
+//        licenses = ["Dialog"]
+//        publish = true
         publicDownloadNumbers = true
         version {
             desc = libraryDescription
