@@ -11,6 +11,7 @@ apply plugin: 'com.jfrog.bintray'
 ext {
     grpcVersion = '1.17.1'
     gitUrl = "https://github.com/dialogs/java-bot-sdk"
+    issueTrackerUrl = "https://github.com/dialogs/java-bot-sdk/issues"
     libraryDescription = "Bot SDK for java developers"
     bintrayUser = System.env.bintrayUser != null ? System.env.bintrayUser : ""
     bintrayPassword = System.env.bintrayPassword != null ? System.env.bintrayPassword : ""
@@ -29,9 +30,24 @@ repositories {
 
 afterReleaseBuild.dependsOn bintrayUpload
 
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
 publishing {
     publications {
-        BotSDKPublication(MavenPublication) {
+        maven(MavenPublication) {
             from components.java
             groupId group
             artifactId artifactId
@@ -44,7 +60,7 @@ bintray {
     user = bintrayUser
     key = bintrayPassword
     override = false
-    configurations = ['BotSDKPublication']
+    configurations = ['archives']
 
     pkg {
         userOrg = 'dialog'
@@ -53,8 +69,8 @@ bintray {
         desc = libraryDescription
         websiteUrl = 'https://dlg.im'
         vcsUrl = gitUrl
-//        licenses = ["Dialog"]
-//        publish = true
+        licenses = ["MIT"]
+        issueTrackerUrl = issueTrackerUrl
         publicDownloadNumbers = true
         version {
             desc = libraryDescription
