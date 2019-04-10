@@ -66,8 +66,8 @@ public class UsersApi {
                     )
             ).thenApplyAsync(r -> r.getFullUsersList().stream().map(fu -> {
                 UsersOuterClass.User u = users.get(fu.getId());
-                return new User(peerMap.get(fu.getId()), u.getName(), u.getNick().getValue(),
-                        User.Sex.fromServerModel(u.getSex()), fu.getAbout().getValue(),
+                return new User(peerMap.get(fu.getId()), u.getData().getName(), u.getData().getNick().getValue(),
+                        User.Sex.fromServerModel(u.getData().getSex()), fu.getAbout().getValue(),
                         fu.getPreferredLanguages(0), fu.getTimeZone().getValue(),
                         fu.getCustomProfile()
                 );

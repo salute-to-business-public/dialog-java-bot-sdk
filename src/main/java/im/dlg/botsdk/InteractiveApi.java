@@ -60,14 +60,14 @@ public class InteractiveApi {
     public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group) {
 
         RequestSendMessage request = RequestSendMessage.newBuilder()
-                .setRid(MsgUtils.uniqueCurrentTimeMS())
+                .setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
                 .setPeer(PeerUtils.toServerOutPeer(peer))
                 .setMessage(buildMessageContent(group)).build();
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.sendMessage(request)
-        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
     }
 
     /**

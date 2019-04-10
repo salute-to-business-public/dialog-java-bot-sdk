@@ -92,7 +92,7 @@ public class MessagingApi {
      */
     public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
-        RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setRid(MsgUtils.uniqueCurrentTimeMS())
+        RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
                 .setPeer(outPeer).setMessage(message);
 
         if (targetUser != null) {
@@ -103,7 +103,7 @@ public class MessagingApi {
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.sendMessage(request.build())
-        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
     }
 
     /**
