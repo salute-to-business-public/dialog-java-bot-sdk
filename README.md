@@ -26,7 +26,7 @@ repositories {
 2) Add BOT dependency
 ```
 dependencies {
-    compile 'im.dlg:bot-sdk:1.2'
+    compile 'im.dlg:bot-sdk:1.3'
 }
 ```
 
