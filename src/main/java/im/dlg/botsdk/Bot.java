@@ -1,10 +1,19 @@
 package im.dlg.botsdk;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import im.dlg.botsdk.utils.NetUtils;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+
+import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class Bot {
 
@@ -18,6 +27,7 @@ public class Bot {
     private InteractiveApi interactiveApi;
     private MediaAndFilesApi mediaAndFilesApi;
     private DialogExecutor executor;
+    private AsyncHttpClient asyncHttpClient;
 
     private volatile CompletableFuture<Bot> voidCompletableFuture;
 
@@ -45,7 +55,8 @@ public class Bot {
                 .withPort(config.getInt("port")).build();
 
         Bot instance = new Bot(botConfig);
-        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor);
+        instance.asyncHttpClient = createHttpClient(botConfig);
+        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor, instance.asyncHttpClient);
 
         instance.voidCompletableFuture = instance.internalBotApi.start().thenAccept(v -> {
             instance.runApis(instance.internalBotApi);
@@ -62,7 +73,8 @@ public class Bot {
      */
     public static CompletableFuture<Bot> start(BotConfig botConfig) {
         Bot instance = new Bot();
-        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor);
+        instance.asyncHttpClient = createHttpClient(botConfig);
+        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor, instance.asyncHttpClient);
 
         instance.voidCompletableFuture = instance.internalBotApi.start().thenAccept(v -> {
             instance.runApis(instance.internalBotApi);
@@ -76,6 +88,22 @@ public class Bot {
         users = new UsersApi(internalBotApi);
         interactiveApi = new InteractiveApi(internalBotApi);
         mediaAndFilesApi = new MediaAndFilesApi(internalBotApi);
+    }
+
+    private static AsyncHttpClient createHttpClient(BotConfig botConfig) {
+        final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
+        if (botConfig.getCertPath() != null && botConfig.getCertPassword() != null) {
+            try {
+                SslContext sslContext = SslContextBuilder.forClient()
+                        .keyManager(NetUtils.createKeyFactory(new File(botConfig.getCertPath()),
+                                botConfig.getCertPassword())).build();
+                builder.setSslContext(sslContext);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return asyncHttpClient(builder);
     }
 
     /**
@@ -94,6 +122,13 @@ public class Bot {
      */
     public void stop() {
         synchronized (stopLock) {
+            if (!asyncHttpClient.isClosed()) {
+                try {
+                    asyncHttpClient.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
             stopLock.notifyAll();
         }
     }

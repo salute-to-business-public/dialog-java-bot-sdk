@@ -22,6 +22,7 @@ import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.asynchttpclient.AsyncHttpClient;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -36,6 +37,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     DialogExecutor executor;
     ChannelWrapper channel;
     BotConfig botConfig;
+    AsyncHttpClient httpClient;
 
     private volatile Metadata metadata;
     private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
@@ -43,10 +45,11 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
 
-    InternalBotApi(BotConfig botConfig, DialogExecutor executor) {
+    InternalBotApi(BotConfig botConfig, DialogExecutor executor, AsyncHttpClient httpClient) {
         this.botConfig = botConfig;
         this.executor = executor;
         this.channel = new ChannelWrapper(this.botConfig);
+        this.httpClient = httpClient;
     }
 
     CompletableFuture<Void> start() {
