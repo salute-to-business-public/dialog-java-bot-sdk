@@ -71,6 +71,7 @@ bintray {
         vcsUrl = gitUrl
         licenses = ["MIT"]
         issueTrackerUrl = issueTrackerUrl
+        publish = true
         publicDownloadNumbers = true
         version {
             desc = libraryDescription
