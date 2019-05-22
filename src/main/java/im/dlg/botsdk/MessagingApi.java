@@ -10,9 +10,6 @@ import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.content.DocumentContent;
 import im.dlg.botsdk.light.MessageListener;
 import im.dlg.botsdk.utils.*;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.javatuples.Pair;
 
 import javax.annotation.Nonnull;
@@ -27,7 +24,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static dialog.MediaAndFilesOuterClass.*;
-import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 /**
  * Central class for messaging API
@@ -141,20 +137,6 @@ public class MessagingApi {
 
         RequestGetFileUploadUrl.Builder requestGetUrl = RequestGetFileUploadUrl.newBuilder()
                 .setExpectedSize(fileSize);
-        final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
-
-        if (privateBot.botConfig.getCertPath() != null
-                && privateBot.botConfig.getCertPassword() != null) {
-            try {
-                SslContext sslContext = SslContextBuilder.forClient()
-                        .keyManager(NetUtils.createKeyFactory(new File(privateBot.botConfig.getCertPath()),
-                                privateBot.botConfig.getCertPassword())).build();
-                builder.setSslContext(sslContext);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
 
         return privateBot
                 .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(1,
@@ -168,7 +150,7 @@ public class MessagingApi {
                                     TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
                             .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
                 }).thenCompose(respPair ->
-                        asyncHttpClient(builder).preparePut(respPair.getValue0())
+                        privateBot.httpClient.preparePut(respPair.getValue0())
                                 .setBody(file).execute().toCompletableFuture()
                                 .thenApply(val -> respPair.getValue1())
                 ).thenCompose(uploadKey -> privateBot
