@@ -45,6 +45,10 @@ artifacts {
     archives sourcesJar
 }
 
+release {
+    preCommitText = System.env.COMMIT_PREFIX != null ? System.env.COMMIT_PREFIX : ""
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
