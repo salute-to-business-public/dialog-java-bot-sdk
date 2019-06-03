@@ -11,6 +11,7 @@ import dialog.MessagingOuterClass.Dialog;
 import dialog.MessagingOuterClass.HistoryMessage;
 import dialog.MessagingOuterClass.ListLoadMode;
 import dialog.MessagingOuterClass.RequestLoadDialogs;
+import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.light.UpdateListener;
@@ -40,7 +41,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     AsyncHttpClient httpClient;
 
     private volatile Metadata metadata;
-    private Map<Peers.Peer, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
+    private Map<String, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private static Integer appId = 11011;
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
 
@@ -146,21 +147,23 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     }
 
     CompletableFuture<Optional<Peers.OutPeer>> findOutPeer(Peers.Peer peer) {
-        return outPeerMap.containsKey(peer) ?
-                CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peer))) :
+        String peerHash = PeerUtils.peerHasher(peer);
+        return outPeerMap.containsKey(peerHash) ?
+                CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peerHash))) :
                 // implicitly load outPeers of loaded dialogs
                 loadDialogs(Sets.newHashSet(peer)).thenApplyAsync(x ->
-                        outPeerMap.containsKey(peer) ? Optional.of(outPeerMap.get(peer)) : Optional.empty()
+                        outPeerMap.containsKey(peerHash) ? Optional.of(outPeerMap.get(peerHash)) : Optional.empty()
                 );
     }
 
     CompletableFuture<Optional<Peers.OutPeer>> loadSenderOutPeer(Integer senderId, Peers.OutPeer peer, long date) {
         Peers.Peer senderPeer = PeerUtils.toUserPeer(senderId);
-        return outPeerMap.containsKey(senderPeer) ?
-                CompletableFuture.completedFuture(Optional.of(outPeerMap.get(senderPeer))) :
+        String peerHash = PeerUtils.peerHasher(senderPeer);
+        return outPeerMap.containsKey(peerHash) ?
+                CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peerHash))) :
                 // implicitly load outPeers of loaded dialogs
                 load(peer, date, 2).thenApplyAsync(x ->
-                        outPeerMap.containsKey(senderPeer) ? Optional.of(outPeerMap.get(senderPeer)) : Optional.empty()
+                        outPeerMap.containsKey(peerHash) ? Optional.of(outPeerMap.get(peerHash)) : Optional.empty()
                 );
     }
 
@@ -170,15 +173,15 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     }
 
     private void putOutPeer(Peers.OutPeer outPeer) {
-        outPeerMap.put(PeerUtils.toPeer(outPeer), outPeer);
+        outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), outPeer);
     }
 
     private void putOutPeer(Peers.UserOutPeer outPeer) {
-        outPeerMap.put(PeerUtils.toPeer(outPeer), PeerUtils.toOutPeer(outPeer));
+        outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), PeerUtils.toOutPeer(outPeer));
     }
 
     private void putOutPeer(Peers.GroupOutPeer outPeer) {
-        outPeerMap.put(PeerUtils.toPeer(outPeer), PeerUtils.toOutPeer(outPeer));
+        outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), PeerUtils.toOutPeer(outPeer));
     }
 
     public CompletableFuture<List<Message>> load(Peers.OutPeer peer, long from, Integer limit) {
@@ -230,6 +233,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
             return res.getDialogsList();
         }, executor.getExecutor());
     }
+
 
     public synchronized <T extends GeneratedMessageV3> void subscribeOn(Class<T> clazz, UpdateListener<T> listener) {
         if (!subscribers.containsKey(clazz)) {

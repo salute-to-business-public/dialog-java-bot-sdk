@@ -105,4 +105,16 @@ public class PeerUtils {
                 .setAccessHash(peer.getAccessHash())
                 .build();
     }
+
+    public static String peerHasher(Peers.Peer peer) {
+        return peer.getId() + "_" + peer.getType().toString();
+    }
+
+    public static String peerHasher(Peers.OutPeer outPeer) {
+        return outPeer.getId() + "_" + outPeer.getType().toString();
+    }
+
+    public static String peerHasher(Peers.UserOutPeer outPeer) {
+        return outPeer.getUid() + "_" + Peers.PeerType.PEERTYPE_PRIVATE.toString();
+    }
 }
