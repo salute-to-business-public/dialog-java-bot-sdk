@@ -25,6 +25,7 @@ public class Bot {
     private MessagingApi messagingApi;
     private UsersApi users;
     private InteractiveApi interactiveApi;
+    private GroupsApi groupsApi;
     private MediaAndFilesApi mediaAndFilesApi;
     private DialogExecutor executor;
     private AsyncHttpClient asyncHttpClient;
@@ -88,6 +89,7 @@ public class Bot {
         users = new UsersApi(internalBotApi);
         interactiveApi = new InteractiveApi(internalBotApi);
         mediaAndFilesApi = new MediaAndFilesApi(internalBotApi);
+        groupsApi = new GroupsApi(internalBotApi);
     }
 
     private static AsyncHttpClient createHttpClient(BotConfig botConfig) {
@@ -171,5 +173,10 @@ public class Bot {
     public MediaAndFilesApi mediaAndFilesApi() {
         lock();
         return mediaAndFilesApi;
+    }
+
+    public GroupsApi groupsApi() {
+        lock();
+        return groupsApi;
     }
 }
