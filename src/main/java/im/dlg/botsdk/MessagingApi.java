@@ -1,6 +1,8 @@
 package im.dlg.botsdk;
 
+import com.google.protobuf.ByteString;
 import dialog.MediaAndFilesGrpc;
+import dialog.MediaAndFilesOuterClass;
 import dialog.MessagingGrpc;
 import dialog.MessagingOuterClass.*;
 import dialog.Peers;
@@ -14,14 +16,22 @@ import org.javatuples.Pair;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.awt.*;
+import java.io.*;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.FileImageInputStream;
+import javax.imageio.stream.ImageInputStream;
+import javax.swing.*;
 
 import static dialog.MediaAndFilesOuterClass.*;
 
@@ -176,6 +186,93 @@ public class MessagingApi {
 
                     return send(peer, msg, null);
                 });
+    }
+
+    public CompletableFuture<UUID> sendImage(@Nonnull final Peer peer, @Nonnull final File image) {
+        if (!image.exists()) {
+            new CompletableFuture<>().completeExceptionally(
+                    new FileNotFoundException("File not found: " + image.getPath()));
+        }
+
+        if (!image.isFile()) {
+            new CompletableFuture<>().completeExceptionally(
+                    new FileNotFoundException("Path is not a file: " + image.getPath()));
+        }
+
+        String fileName = image.getName();
+        int fileSize = (int) image.length();
+        RequestGetFileUploadUrl.Builder requestGetUrl = RequestGetFileUploadUrl.newBuilder()
+                .setExpectedSize(fileSize);
+
+        CompletableFuture<UUID> resp;
+
+        try {
+
+            InputStream is = new BufferedInputStream(new FileInputStream(image));
+            String mimeType = URLConnection.guessContentTypeFromStream(is);
+            is.close();
+
+            System.setProperty("java.awt.headless", "true");
+
+            Dimension dimension = ImageUtils.getImageDimension(image);
+
+            FastThumb.Builder fastThumb = FastThumb.newBuilder().setThumb(ByteString.copyFrom(Files.readAllBytes(image.toPath())));
+
+            DocumentExPhoto documentExPhoto = DocumentExPhoto.newBuilder()
+                    .setH(dimension.height)
+                    .setW(dimension.width)
+                    .build();
+
+            DocumentEx documentEx = DocumentEx.newBuilder()
+                    .setPhoto(documentExPhoto)
+                    .build();
+
+            resp = privateBot
+                    .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(1,
+                            TimeUnit.MINUTES), stub -> stub.getFileUploadUrl(requestGetUrl.build())
+                    ).thenCompose(responseGetFileUploadUrl -> {
+                        RequestGetFileUploadPartUrl.Builder uploadPart =
+                                RequestGetFileUploadPartUrl.newBuilder().setPartNumber(0).
+                                        setPartSize(fileSize).setUploadKey(responseGetFileUploadUrl.getUploadKey());
+                        return privateBot
+                                .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
+                                        TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
+                                .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
+                    }).thenCompose(respPair ->
+                            privateBot.httpClient.preparePut(respPair.getValue0())
+                                    .setBody(image).execute().toCompletableFuture()
+                                    .thenApply(val -> respPair.getValue1())
+                    ).thenCompose(uploadKey -> privateBot
+                            .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
+                                    TimeUnit.MINUTES), stub ->
+                                    stub.commitFileUpload(RequestCommitFileUpload.newBuilder()
+                                            .setFileName(fileName)
+                                            .setUploadKey(uploadKey).build()))
+                            .thenApply(ResponseCommitFileUpload::getUploadedFileLocation)
+                    ).thenCompose(fileLocation -> {
+                        DocumentMessage document = DocumentMessage
+                                .newBuilder()
+                                .setFileId(fileLocation.getFileId())
+                                .setAccessHash(fileLocation.getAccessHash())
+                                .setFileSize(fileSize)
+                                .setName(fileName)
+                                .setMimeType(mimeType)
+                                .setThumb(fastThumb)
+                                .setExt(documentEx)
+                                .build();
+
+                        MessageContent msg = MessageContent.newBuilder()
+                                .setDocumentMessage(document)
+                                .build();
+
+                        return send(peer, msg, null);
+                    });
+        } catch(IOException e) {
+            resp = new CompletableFuture<>();
+            resp.completeExceptionally(e);
+        }
+
+        return resp;
     }
 
     /**
