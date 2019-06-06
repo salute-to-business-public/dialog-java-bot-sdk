@@ -80,6 +80,8 @@ public class Bot {
             instance.runApis(instance.internalBotApi);
         }).thenCompose(aVoid -> CompletableFuture.completedFuture(instance));
 
+        System.setProperty("java.awt.headless", "true");
+
         return instance.voidCompletableFuture;
     }
 

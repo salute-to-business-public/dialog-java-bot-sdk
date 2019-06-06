@@ -1,8 +1,6 @@
 package im.dlg.botsdk;
 
 import com.google.protobuf.ByteString;
-import dialog.MediaAndFilesGrpc;
-import dialog.MediaAndFilesOuterClass;
 import dialog.MessagingGrpc;
 import dialog.MessagingOuterClass.*;
 import dialog.Peers;
@@ -12,7 +10,6 @@ import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.content.DocumentContent;
 import im.dlg.botsdk.light.MessageListener;
 import im.dlg.botsdk.utils.*;
-import org.javatuples.Pair;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -20,18 +17,14 @@ import java.awt.*;
 import java.io.*;
 import java.net.URLConnection;
 import java.nio.file.Files;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.FileImageInputStream;
-import javax.imageio.stream.ImageInputStream;
-import javax.swing.*;
+
 
 import static dialog.MediaAndFilesOuterClass.*;
 
@@ -145,47 +138,28 @@ public class MessagingApi {
         String fileName = file.getName();
         int fileSize = (int) file.length();
 
-        RequestGetFileUploadUrl.Builder requestGetUrl = RequestGetFileUploadUrl.newBuilder()
-                .setExpectedSize(fileSize);
+        try {
+            return MediaAndFilesApi.upLoadFile(file, "application/octet-stream").thenCompose(fileLocation -> {
+                        DocumentMessage document = DocumentMessage
+                                .newBuilder()
+                                .setFileId(fileLocation.getFileId())
+                                .setAccessHash(fileLocation.getAccessHash())
+                                .setFileSize(fileSize)
+                                .setName(fileName)
+                                .setMimeType("application/octet-stream")
+                                .build();
 
-        return privateBot
-                .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(1,
-                        TimeUnit.MINUTES), stub -> stub.getFileUploadUrl(requestGetUrl.build())
-                ).thenCompose(responseGetFileUploadUrl -> {
-                    RequestGetFileUploadPartUrl.Builder uploadPart =
-                            RequestGetFileUploadPartUrl.newBuilder().setPartNumber(0).
-                                    setPartSize(fileSize).setUploadKey(responseGetFileUploadUrl.getUploadKey());
-                    return privateBot
-                            .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
-                                    TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
-                            .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
-                }).thenCompose(respPair ->
-                        privateBot.httpClient.preparePut(respPair.getValue0())
-                                .setBody(file).execute().toCompletableFuture()
-                                .thenApply(val -> respPair.getValue1())
-                ).thenCompose(uploadKey -> privateBot
-                        .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
-                                TimeUnit.MINUTES), stub ->
-                                stub.commitFileUpload(RequestCommitFileUpload.newBuilder()
-                                        .setFileName(fileName)
-                                        .setUploadKey(uploadKey).build()))
-                        .thenApply(ResponseCommitFileUpload::getUploadedFileLocation)
-                ).thenCompose(fileLocation -> {
-                    DocumentMessage document = DocumentMessage
-                            .newBuilder()
-                            .setFileId(fileLocation.getFileId())
-                            .setAccessHash(fileLocation.getAccessHash())
-                            .setFileSize(fileSize)
-                            .setName(fileName)
-                            .setMimeType("application/octet-stream")
-                            .build();
+                        MessageContent msg = MessageContent.newBuilder()
+                                .setDocumentMessage(document)
+                                .build();
 
-                    MessageContent msg = MessageContent.newBuilder()
-                            .setDocumentMessage(document)
-                            .build();
+                        return send(peer, msg, null);
+                    });
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
 
-                    return send(peer, msg, null);
-                });
+        return null;
     }
 
     public CompletableFuture<UUID> sendImage(@Nonnull final Peer peer, @Nonnull final File image) {
@@ -201,18 +175,14 @@ public class MessagingApi {
 
         String fileName = image.getName();
         int fileSize = (int) image.length();
-        RequestGetFileUploadUrl.Builder requestGetUrl = RequestGetFileUploadUrl.newBuilder()
-                .setExpectedSize(fileSize);
 
-        CompletableFuture<UUID> resp;
+        CompletableFuture<UUID> resp = new CompletableFuture<>();
 
         try {
 
             InputStream is = new BufferedInputStream(new FileInputStream(image));
             String mimeType = URLConnection.guessContentTypeFromStream(is);
             is.close();
-
-            System.setProperty("java.awt.headless", "true");
 
             Dimension dimension = ImageUtils.getImageDimension(image);
 
@@ -227,29 +197,8 @@ public class MessagingApi {
                     .setPhoto(documentExPhoto)
                     .build();
 
-            resp = privateBot
-                    .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(1,
-                            TimeUnit.MINUTES), stub -> stub.getFileUploadUrl(requestGetUrl.build())
-                    ).thenCompose(responseGetFileUploadUrl -> {
-                        RequestGetFileUploadPartUrl.Builder uploadPart =
-                                RequestGetFileUploadPartUrl.newBuilder().setPartNumber(0).
-                                        setPartSize(fileSize).setUploadKey(responseGetFileUploadUrl.getUploadKey());
-                        return privateBot
-                                .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
-                                        TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
-                                .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
-                    }).thenCompose(respPair ->
-                            privateBot.httpClient.preparePut(respPair.getValue0())
-                                    .setBody(image).execute().toCompletableFuture()
-                                    .thenApply(val -> respPair.getValue1())
-                    ).thenCompose(uploadKey -> privateBot
-                            .withToken(MediaAndFilesGrpc.newFutureStub(privateBot.channel.getChannel()).withDeadlineAfter(3,
-                                    TimeUnit.MINUTES), stub ->
-                                    stub.commitFileUpload(RequestCommitFileUpload.newBuilder()
-                                            .setFileName(fileName)
-                                            .setUploadKey(uploadKey).build()))
-                            .thenApply(ResponseCommitFileUpload::getUploadedFileLocation)
-                    ).thenCompose(fileLocation -> {
+            resp = MediaAndFilesApi.upLoadFile(image, mimeType)
+                    .thenCompose(fileLocation -> {
                         DocumentMessage document = DocumentMessage
                                 .newBuilder()
                                 .setFileId(fileLocation.getFileId())
@@ -270,6 +219,8 @@ public class MessagingApi {
         } catch(IOException e) {
             resp = new CompletableFuture<>();
             resp.completeExceptionally(e);
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
 
         return resp;
