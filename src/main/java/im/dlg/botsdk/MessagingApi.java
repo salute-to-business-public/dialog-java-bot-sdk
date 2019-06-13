@@ -13,7 +13,9 @@ import im.dlg.botsdk.utils.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -186,7 +188,19 @@ public class MessagingApi {
 
             Dimension dimension = ImageUtils.getImageDimension(image);
 
-            FastThumb.Builder fastThumb = FastThumb.newBuilder().setThumb(ByteString.copyFrom(Files.readAllBytes(image.toPath())));
+            BufferedImage bufImage = ImageIO.read(image);
+
+            BufferedImage resized = ImageUtils.resize(bufImage, 50, 50);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+            ImageIO.write(resized, "jpg", baos);
+
+            FastThumb fastThumb = FastThumb.newBuilder()
+                    .setThumb(ByteString.copyFrom(baos.toByteArray()))
+                    .setH(50)
+                    .setW(50)
+                    .build();
 
             DocumentExPhoto documentExPhoto = DocumentExPhoto.newBuilder()
                     .setH(dimension.height)
