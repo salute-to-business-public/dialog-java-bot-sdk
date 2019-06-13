@@ -1,14 +1,12 @@
 package im.dlg.botsdk.domain;
 
-import dialog.GroupsOuterClass;
-
 public class Group {
     private String shortname;
     private String title;
     private Peer peer;
-    private GroupsOuterClass.GroupType type;
+    private GroupType type;
 
-    public Group(String shortname, String title, Peer peer, GroupsOuterClass.GroupType type) {
+    public Group(String shortname, String title, Peer peer, GroupType type) {
         this.shortname = shortname;
         this.title = title;
         this.peer = peer;
@@ -39,7 +37,7 @@ public class Group {
     /**
      * @return About string info
      */
-    public GroupsOuterClass.GroupType getType() {
+    public GroupType getType() {
         return type;
     }
 
@@ -53,7 +51,7 @@ public class Group {
                 "peer=" + peer +
                 ", title='" + title + '\'' +
                 ", shortname='" + shortname + '\'' +
-                ", type='" + type.toString() +
+                ", type='" + type +
                 '}';
     }
 }

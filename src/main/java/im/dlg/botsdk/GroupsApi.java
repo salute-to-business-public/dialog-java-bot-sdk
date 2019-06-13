@@ -3,6 +3,7 @@ package im.dlg.botsdk;
 import com.google.protobuf.StringValue;
 import dialog.*;
 import im.dlg.botsdk.domain.Group;
+import im.dlg.botsdk.domain.GroupType;
 import im.dlg.botsdk.domain.Peer;
 
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ public class GroupsApi {
                     group.getShortname().getValue(),
                     group.getTitle(),
                     new Peer(group.getId(), Peer.PeerType.GROUP, group.getAccessHash()),
-                    group.getGroupType());
+                    GroupType.fromServer(group.getGroupType()));
         }, privateBot.executor.getExecutor());
     }
 }
