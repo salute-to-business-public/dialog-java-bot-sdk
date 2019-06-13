@@ -28,7 +28,7 @@ public class MediaAndFilesApi {
      *
      */
 
-    private InternalBotApi privateBot;
+    private static InternalBotApi privateBot;
 
     MediaAndFilesApi(InternalBotApi privateBot) {
         this.privateBot = privateBot;
@@ -44,7 +44,7 @@ public class MediaAndFilesApi {
      * @throws InterruptedException in concurrency issues
      * @throws ExecutionException   in concurrency issues
      */
-    public CompletableFuture<FileLocation> upLoadFile(@Nonnull File file, @Nonnull String mimeType)
+    public static CompletableFuture<FileLocation> upLoadFile(@Nonnull File file, @Nonnull String mimeType)
             throws InterruptedException, ExecutionException {
 
         if (!file.isFile()) {
