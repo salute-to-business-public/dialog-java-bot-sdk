@@ -79,4 +79,54 @@ public class UsersApi {
         return privateBot.findUserOutPeer(userId)
                 .thenApply(u -> u.map(PeerUtils::toDomainPeer));
     }
+
+    public CompletableFuture<List<User>> searchUserByNick(String nickname) {
+        SearchOuterClass.RequestPeerSearch request = SearchOuterClass.RequestPeerSearch.newBuilder()
+                .addQuery(SearchOuterClass.SearchCondition.newBuilder()
+                        .setSearchPeerTypeCondition(SearchOuterClass.SearchPeerTypeCondition.newBuilder()
+                                .setPeerTypeValue(SearchOuterClass.SearchPeerType.SEARCHPEERTYPE_CONTACTS_VALUE)
+                                .build()
+                        )
+                )
+                .addQuery(SearchOuterClass.SearchCondition.newBuilder()
+                        .setSearchPieceText(SearchOuterClass.SearchPieceText.newBuilder()
+                                .setQuery(nickname)
+                                .build()
+                        )
+                )
+                .addOptimizations(Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_COMPACT_USERS)
+                .build();
+
+        return privateBot.withToken(
+                SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.peerSearch(request)
+        ).thenApplyAsync(res -> res.getUsersList().stream().map(u ->
+                 new User(
+                        new Peer(
+                                u.getId(),
+                                Peer.PeerType.PRIVATE,
+                                u.getAccessHash()
+                        ),
+                        u.getData().getName(),
+                        u.getData().getNick().getValue(),
+                        User.Sex.fromServerModel(u.getData().getSex()),
+                        "",
+                        "",
+                        u.getData().getTimeZone(),
+                        ""
+                )
+        ).collect(Collectors.toList()), privateBot.executor.getExecutor());
+    }
+
+    public CompletableFuture<Peer> resolvePeer(String shortname) {
+        SearchOuterClass.RequestResolvePeer request = SearchOuterClass.RequestResolvePeer.newBuilder()
+                .setShortname(shortname)
+                .build();
+
+        return privateBot.withToken(
+                SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.resolvePeer(request)
+        ).thenApplyAsync(res -> new Peer(res.getPeer().getId(), Peer.PeerType.PRIVATE, res.getPeer().getAccessHash()),privateBot.executor.getExecutor());
+    }
+
 }
