@@ -106,6 +106,24 @@ public class PeerUtils {
                 .build();
     }
 
+    public static Peer.PeerType toDomainPeerType(Peers.PeerType peerType) {
+        Peer.PeerType result = Peer.PeerType.UNKNOWN;
+        switch (peerType) {
+            case PEERTYPE_GROUP: result = Peer.PeerType.GROUP;
+                break;
+
+            case PEERTYPE_PRIVATE: result = Peer.PeerType.PRIVATE;
+                break;
+
+            case PEERTYPE_SIP: result = Peer.PeerType.SIP;
+                break;
+
+            case PEERTYPE_UNKNOWN: result = Peer.PeerType.UNKNOWN;
+                break;
+        }
+        return result;
+    }
+
     public static String peerHasher(Peers.Peer peer) {
         return peer.getId() + "_" + peer.getType().toString();
     }

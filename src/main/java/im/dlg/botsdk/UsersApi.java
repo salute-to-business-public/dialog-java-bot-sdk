@@ -80,7 +80,7 @@ public class UsersApi {
                 .thenApply(u -> u.map(PeerUtils::toDomainPeer));
     }
 
-    public CompletableFuture<List<User>> searchUserByNick(String nickname) {
+    public CompletableFuture<List<User>> searchUserByNick(String query) {
         SearchOuterClass.RequestPeerSearch request = SearchOuterClass.RequestPeerSearch.newBuilder()
                 .addQuery(SearchOuterClass.SearchCondition.newBuilder()
                         .setSearchPeerTypeCondition(SearchOuterClass.SearchPeerTypeCondition.newBuilder()
@@ -90,7 +90,7 @@ public class UsersApi {
                 )
                 .addQuery(SearchOuterClass.SearchCondition.newBuilder()
                         .setSearchPieceText(SearchOuterClass.SearchPieceText.newBuilder()
-                                .setQuery(nickname)
+                                .setQuery(query)
                                 .build()
                         )
                 )
@@ -117,16 +117,4 @@ public class UsersApi {
                 )
         ).collect(Collectors.toList()), privateBot.executor.getExecutor());
     }
-
-    public CompletableFuture<Peer> resolvePeer(String shortname) {
-        SearchOuterClass.RequestResolvePeer request = SearchOuterClass.RequestResolvePeer.newBuilder()
-                .setShortname(shortname)
-                .build();
-
-        return privateBot.withToken(
-                SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.resolvePeer(request)
-        ).thenApplyAsync(res -> new Peer(res.getPeer().getId(), Peer.PeerType.PRIVATE, res.getPeer().getAccessHash()),privateBot.executor.getExecutor());
-    }
-
 }
