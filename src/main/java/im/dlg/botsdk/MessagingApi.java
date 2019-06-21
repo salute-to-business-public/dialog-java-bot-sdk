@@ -19,6 +19,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLConnection;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -107,7 +108,8 @@ public class MessagingApi {
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
     }
 
-    public CompletableFuture<UUID> delete(@Nonnull Message message) {
+    public CompletableFuture<UUID> delete(@Nonnull UUID messageId) {
+        Date date = new Date();
         BoolValue boolValue = BoolValue.newBuilder().setValue(false).build();
         DeletedMessage deletedMessage = DeletedMessage.newBuilder()
                 .setIsLocal(boolValue)
@@ -116,8 +118,8 @@ public class MessagingApi {
                 .setDeletedMessage(deletedMessage)
                 .build();
         RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
-                .setMid(UUIDUtils.convertToApi(message.getMessageId()))
-                .setLastEditedAt(message.getDate())
+                .setMid(UUIDUtils.convertToApi(messageId))
+                .setLastEditedAt(date.getTime())
                 .setUpdatedMessage(messageContent)
                 .build();
 
