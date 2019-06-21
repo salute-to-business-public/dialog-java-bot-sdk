@@ -1,5 +1,6 @@
 package im.dlg.botsdk;
 
+import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
 import dialog.MessagingGrpc;
 import dialog.MessagingOuterClass.*;
@@ -18,7 +19,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLConnection;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -91,7 +91,7 @@ public class MessagingApi {
      * @param targetUser - message will be visible only to this UID
      * @return - future with message UUID, that completes when deliver to server
      */
-    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
+    private CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
         RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
                 .setPeer(outPeer).setMessage(message);
@@ -105,6 +105,27 @@ public class MessagingApi {
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.sendMessage(request.build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
+    }
+
+    public CompletableFuture<UUID> delete(@Nonnull Message message) {
+        BoolValue boolValue = BoolValue.newBuilder().setValue(false).build();
+        DeletedMessage deletedMessage = DeletedMessage.newBuilder()
+                .setIsLocal(boolValue)
+                .build();
+        MessageContent messageContent = MessageContent.newBuilder()
+                .setDeletedMessage(deletedMessage)
+                .build();
+        RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
+                .setMid(UUIDUtils.convertToApi(message.getMessageId()))
+                .setLastEditedAt(message.getDate())
+                .setUpdatedMessage(messageContent)
+                .build();
+
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                    .withDeadlineAfter(2, TimeUnit.MINUTES),
+                stub -> stub.updateMessage(request)
+        ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
     }
 
     /**
