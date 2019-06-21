@@ -79,4 +79,42 @@ public class UsersApi {
         return privateBot.findUserOutPeer(userId)
                 .thenApply(u -> u.map(PeerUtils::toDomainPeer));
     }
+
+    public CompletableFuture<List<User>> searchUserByNick(String query) {
+        SearchOuterClass.RequestPeerSearch request = SearchOuterClass.RequestPeerSearch.newBuilder()
+                .addQuery(SearchOuterClass.SearchCondition.newBuilder()
+                        .setSearchPeerTypeCondition(SearchOuterClass.SearchPeerTypeCondition.newBuilder()
+                                .setPeerTypeValue(SearchOuterClass.SearchPeerType.SEARCHPEERTYPE_CONTACTS_VALUE)
+                                .build()
+                        )
+                )
+                .addQuery(SearchOuterClass.SearchCondition.newBuilder()
+                        .setSearchPieceText(SearchOuterClass.SearchPieceText.newBuilder()
+                                .setQuery(query)
+                                .build()
+                        )
+                )
+                .addOptimizations(Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_COMPACT_USERS)
+                .build();
+
+        return privateBot.withToken(
+                SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.peerSearch(request)
+        ).thenApplyAsync(res -> res.getUsersList().stream().map(u ->
+                 new User(
+                        new Peer(
+                                u.getId(),
+                                Peer.PeerType.PRIVATE,
+                                u.getAccessHash()
+                        ),
+                        u.getData().getName(),
+                        u.getData().getNick().getValue(),
+                        User.Sex.fromServerModel(u.getData().getSex()),
+                        "",
+                        "",
+                        u.getData().getTimeZone(),
+                        ""
+                )
+        ).collect(Collectors.toList()), privateBot.executor.getExecutor());
+    }
 }
