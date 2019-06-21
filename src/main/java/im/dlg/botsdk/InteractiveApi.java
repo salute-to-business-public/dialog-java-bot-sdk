@@ -12,6 +12,7 @@ import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -80,9 +81,12 @@ public class InteractiveApi {
     @SuppressWarnings("unused")
     public CompletableFuture<UUID> update(@Nonnull UUID uuid, @Nonnull InteractiveGroup group) {
 
+        Date date = new Date();
+
         RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
                 .setMid(UUIDUtils.convertToApi(uuid))
                 .setUpdatedMessage(buildMessageContent(group))
+                .setLastEditedAt(date.getTime())
                 .build();
 
         return privateBot.withToken(
