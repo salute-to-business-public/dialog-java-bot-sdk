@@ -91,7 +91,7 @@ public class MessagingApi {
      * @param targetUser - message will be visible only to this UID
      * @return - future with message UUID, that completes when deliver to server
      */
-    private CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
         RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
                 .setPeer(outPeer).setMessage(message);
