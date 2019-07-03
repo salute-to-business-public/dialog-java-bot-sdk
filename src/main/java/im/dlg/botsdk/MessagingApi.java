@@ -93,12 +93,25 @@ public class MessagingApi {
      * @return - future with message UUID, that completes when deliver to server
      */
     public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message, @Nullable Integer targetUser) {
+        return send(peer, message, targetUser, null, null);
+    }
+
+    private CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull MessageContent message,
+                                         @Nullable Integer targetUser, @Nullable ReferencedMessages reply,
+                                         @Nullable ReferencedMessages forward) {
+
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
         RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
                 .setPeer(outPeer).setMessage(message);
 
         if (targetUser != null) {
             request.setIsOnlyForUser(targetUser);
+        }
+
+        if (reply != null) {
+            request.setReply(reply);
+        } else if (forward != null) {
+            request.setForward(forward);
         }
 
         return privateBot.withToken(
@@ -125,7 +138,7 @@ public class MessagingApi {
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
-                    .withDeadlineAfter(2, TimeUnit.MINUTES),
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.updateMessage(request)
         ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
     }
@@ -165,21 +178,21 @@ public class MessagingApi {
 
         try {
             return MediaAndFilesApi.upLoadFile(file, "application/octet-stream").thenCompose(fileLocation -> {
-                        DocumentMessage document = DocumentMessage
-                                .newBuilder()
-                                .setFileId(fileLocation.getFileId())
-                                .setAccessHash(fileLocation.getAccessHash())
-                                .setFileSize(fileSize)
-                                .setName(fileName)
-                                .setMimeType("application/octet-stream")
-                                .build();
+                DocumentMessage document = DocumentMessage
+                        .newBuilder()
+                        .setFileId(fileLocation.getFileId())
+                        .setAccessHash(fileLocation.getAccessHash())
+                        .setFileSize(fileSize)
+                        .setName(fileName)
+                        .setMimeType("application/octet-stream")
+                        .build();
 
-                        MessageContent msg = MessageContent.newBuilder()
-                                .setDocumentMessage(document)
-                                .build();
+                MessageContent msg = MessageContent.newBuilder()
+                        .setDocumentMessage(document)
+                        .build();
 
-                        return send(peer, msg, null);
-                    });
+                return send(peer, msg, null);
+            });
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
@@ -253,7 +266,7 @@ public class MessagingApi {
 
                         return send(peer, msg, null);
                     });
-        } catch(IOException e) {
+        } catch (IOException e) {
             resp = new CompletableFuture<>();
             resp.completeExceptionally(e);
         } catch (InterruptedException | ExecutionException e) {
@@ -276,6 +289,23 @@ public class MessagingApi {
                 .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
         return send(peer, msg, targetUser);
+    }
+
+    /**
+     * Reply on specific message
+     *
+     * @param peer      - the address peer user/channel/group
+     * @param messageId - the message id reply to
+     * @param text      - reply text
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    public CompletableFuture<UUID> reply(@Nonnull Peer peer, @Nonnull UUID messageId, @Nonnull String text) {
+        MessageContent msg = MessageContent.newBuilder()
+                .setTextMessage(TextMessage.newBuilder().setText(text).build())
+                .build();
+
+        ReferencedMessages reply = ReferencedMessages.newBuilder().addMids(UUIDUtils.convertToApi(messageId)).build();
+        return send(peer, msg, null, reply, null);
     }
 
     /**
