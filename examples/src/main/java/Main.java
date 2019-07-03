@@ -1,10 +1,9 @@
-import java.io.File;
-import java.util.concurrent.ExecutionException;
-
 import im.dlg.botsdk.Bot;
 import im.dlg.botsdk.BotConfig;
 import im.dlg.botsdk.domain.content.DocumentContent;
 import im.dlg.botsdk.domain.content.TextContent;
+
+import java.util.concurrent.ExecutionException;
 
 public class Main {
 
@@ -28,7 +27,7 @@ public class Main {
                             } else if (message.getText().equals("Send me video")) {
                                 return bot.messaging().sendDocument(message.getPeer(), (DocumentContent) message.getMessageContent());
                             } else {
-                                return bot.messaging().sendFile(message.getPeer(), new File("/Users/ademin/version"));
+                                return bot.messaging().reply(message.getPeer(), message.getMessageId(), "some reply");
                             }
                         }
                 ).exceptionally(ex -> {
