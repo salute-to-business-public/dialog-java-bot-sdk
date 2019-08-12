@@ -1,10 +1,5 @@
 package im.dlg.botsdk;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import im.dlg.botsdk.utils.NetUtils;
@@ -12,10 +7,19 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class Bot {
+
+    private static final Logger log = LoggerFactory.getLogger(Bot.class);
 
     private BotConfig botConfig;
 
@@ -28,6 +32,8 @@ public class Bot {
     private GroupsApi groupsApi;
     private MediaAndFilesApi mediaAndFilesApi;
     private PeersApi peersApi;
+    private SyncApi syncApi;
+
     private DialogExecutor executor;
     private AsyncHttpClient asyncHttpClient;
 
@@ -94,6 +100,7 @@ public class Bot {
         mediaAndFilesApi = new MediaAndFilesApi(internalBotApi);
         groupsApi = new GroupsApi(internalBotApi);
         peersApi = new PeersApi(internalBotApi);
+        syncApi = new SyncApi(internalBotApi);
     }
 
     private static AsyncHttpClient createHttpClient(BotConfig botConfig) {
@@ -106,7 +113,7 @@ public class Bot {
                 builder.setSslContext(sslContext);
 
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Failed to create http client", e);
             }
         }
         return asyncHttpClient(builder);
@@ -132,7 +139,7 @@ public class Bot {
                 try {
                     asyncHttpClient.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    log.error("Failed to stop bot", e);
                 }
             }
             stopLock.notifyAll();
@@ -143,7 +150,7 @@ public class Bot {
         try {
             voidCompletableFuture.get();
         } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            log.error("Failed to take a lock", e);
         }
     }
 
@@ -187,5 +194,10 @@ public class Bot {
     public PeersApi peersApi() {
         lock();
         return peersApi;
+    }
+
+    public SyncApi syncApi() {
+        lock();
+        return syncApi;
     }
 }

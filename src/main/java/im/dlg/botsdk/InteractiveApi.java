@@ -10,6 +10,8 @@ import im.dlg.botsdk.light.InteractiveEventListener;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.util.Date;
@@ -20,6 +22,8 @@ import java.util.concurrent.CompletableFuture;
  * Api class for all the interactive requests, subscribtions
  */
 public class InteractiveApi {
+
+    private final Logger log = LoggerFactory.getLogger(InteractiveApi.class);
 
     private InternalBotApi privateBot;
     private InteractiveEventListener listener = null;
@@ -35,7 +39,7 @@ public class InteractiveApi {
                             evt.getValue(), PeerUtils.toDomainPeer(outPeer)));
                 }));
             } catch (Throwable throwable) {
-                throwable.printStackTrace();
+                log.error("Failed to subscribe", throwable);
             }
         });
     }
@@ -204,6 +208,6 @@ public class InteractiveApi {
             return;
         }
 
-        System.out.println("Got an event");
+        log.debug("Got an event");
     }
 }

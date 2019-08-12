@@ -11,9 +11,8 @@ import dialog.MessagingOuterClass.Dialog;
 import dialog.MessagingOuterClass.HistoryMessage;
 import dialog.MessagingOuterClass.ListLoadMode;
 import dialog.MessagingOuterClass.RequestLoadDialogs;
-import im.dlg.botsdk.domain.Peer;
-import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.Message;
+import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.light.UpdateListener;
 import im.dlg.botsdk.utils.Constants;
 import im.dlg.botsdk.utils.PeerUtils;
@@ -24,26 +23,33 @@ import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.asynchttpclient.AsyncHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 // TODO: extract StreamObserver to different object
 class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
 
+    private final Logger log = LoggerFactory.getLogger(InternalBotApi.class);
+
     DialogExecutor executor;
     ChannelWrapper channel;
-    BotConfig botConfig;
-    AsyncHttpClient httpClient;
+    private BotConfig botConfig;
+    private AsyncHttpClient httpClient;
 
     private volatile Metadata metadata;
     private Map<String, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private static Integer appId = 11011;
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
+    private AtomicInteger seq = new AtomicInteger();
 
 
     InternalBotApi(BotConfig botConfig, DialogExecutor executor, AsyncHttpClient httpClient) {
@@ -75,7 +81,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
 
                 meta.complete(header);
                 metadata = header;
-                System.out.println("Bot registered with token = " + res.getToken());
+                log.info("Bot registered with token = " + res.getToken());
             } else if (t != null) {
                 meta.completeExceptionally(t);
             }
@@ -122,7 +128,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
                     }
             );
 
-            System.out.println("Bot authorized with id = " + p.getLeft().getId());
+            log.info("Bot authorized with id = " + p.getLeft().getId());
 
             return null;
         });
@@ -235,7 +241,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     }
 
 
-    public synchronized <T extends GeneratedMessageV3> void subscribeOn(Class<T> clazz, UpdateListener<T> listener) {
+    synchronized <T extends GeneratedMessageV3> void subscribeOn(Class<T> clazz, UpdateListener<T> listener) {
         if (!subscribers.containsKey(clazz)) {
             subscribers.put(clazz, new CopyOnWriteArrayList<>());
         }
@@ -243,50 +249,88 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
         subscribers.get(clazz).add(listener);
     }
 
+    CompletableFuture<Integer> getDifference(int seq) {
+        SequenceAndUpdatesOuterClass.RequestGetDifference
+                request = SequenceAndUpdatesOuterClass.RequestGetDifference.newBuilder().setSeq(seq).build();
+
+        return withToken(SequenceAndUpdatesGrpc.newFutureStub(channel.getChannel())
+                .withDeadlineAfter(2, TimeUnit.MINUTES), stub -> stub.getDifference(request))
+                .thenCompose(res -> {
+
+                    for (SequenceAndUpdatesOuterClass.UpdateSeqUpdate update : res.getUpdatesList()) {
+                        callListeners(update);
+                    }
+
+                    int lastSeq = res.getSeq();
+                    this.seq.set(lastSeq);
+
+                    if (res.getNeedMore()) {
+                        return getDifference(lastSeq);
+                    } else {
+                        return CompletableFuture.completedFuture(lastSeq);
+                    }
+                });
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public void onNext(SequenceAndUpdatesOuterClass.SeqUpdateBox value) {
         try {
+
             SequenceAndUpdatesOuterClass.UpdateSeqUpdate upd =
                     SequenceAndUpdatesOuterClass.UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
 
-            Object updateRaw = null;
-
-            try {
-                Field f = upd.getClass().getDeclaredField("update_");
-                f.setAccessible(true);
-                updateRaw = f.get(upd);
-
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                e.printStackTrace();
-            }
-
-            if (!(updateRaw instanceof GeneratedMessageV3)) {
+            int newSeq = upd.getSeq();
+            if (newSeq <= this.seq.get()) {
                 return;
             }
 
-            final GeneratedMessageV3 up = (GeneratedMessageV3) updateRaw;
-
-            for (Map.Entry<Class, List<UpdateListener>> entry : subscribers.entrySet()) {
-                if (updateRaw.getClass().isAssignableFrom(entry.getKey())) {
-                    entry.getValue().forEach(listener -> listener.onUpdate(up));
-                }
-            }
+            callListeners(upd);
+            this.seq.set(newSeq);
 
         } catch (InvalidProtocolBufferException e) {
-            e.printStackTrace();
+            log.error("onNext", e);
+        }
+    }
+
+    private void callListeners(SequenceAndUpdatesOuterClass.UpdateSeqUpdate upd) {
+        Object updateRaw = null;
+
+        try {
+            Field f = upd.getClass().getDeclaredField("update_");
+            f.setAccessible(true);
+            updateRaw = f.get(upd);
+
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            log.error("callListeners", e);
+        }
+
+        if (!(updateRaw instanceof GeneratedMessageV3)) {
+            return;
+        }
+
+        final GeneratedMessageV3 up = (GeneratedMessageV3) updateRaw;
+
+        for (Map.Entry<Class, List<UpdateListener>> entry : subscribers.entrySet()) {
+            if (updateRaw.getClass().isAssignableFrom(entry.getKey())) {
+                entry.getValue().forEach(listener -> listener.onUpdate(up));
+            }
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        t.printStackTrace();
+        log.error("onError", t);
         reconnect();
     }
 
     @Override
     public void onCompleted() {
-        System.out.println("onCompleted");
+        log.info("onCompleted");
         reconnect();
+    }
+
+    AtomicInteger getSeq() {
+        return seq;
     }
 }
