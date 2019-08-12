@@ -1,32 +1,26 @@
 package im.dlg.botsdk;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Nonnull;
-
+import dialog.MediaAndFilesGrpc;
+import dialog.MediaAndFilesOuterClass.*;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import dialog.MediaAndFilesGrpc;
-import dialog.MediaAndFilesOuterClass.FileLocation;
-import dialog.MediaAndFilesOuterClass.RequestCommitFileUpload;
-import dialog.MediaAndFilesOuterClass.RequestGetFileUploadPartUrl;
-import dialog.MediaAndFilesOuterClass.RequestGetFileUploadUrl;
-import dialog.MediaAndFilesOuterClass.RequestGetFileUrls;
+import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 public class MediaAndFilesApi {
 
-    /**
-     *
-     */
+    private static final Logger log = LoggerFactory.getLogger(MessagingApi.class);
 
     private static InternalBotApi privateBot;
 
@@ -41,11 +35,8 @@ public class MediaAndFilesApi {
      * @param mimeType - file mime type
      * @return A CompletableFuture for FileLocation on server side (FileLocation for
      * Dialog internal api)
-     * @throws InterruptedException in concurrency issues
-     * @throws ExecutionException   in concurrency issues
      */
-    public static CompletableFuture<FileLocation> upLoadFile(@Nonnull File file, @Nonnull String mimeType)
-            throws InterruptedException, ExecutionException {
+    public static CompletableFuture<FileLocation> upLoadFile(@Nonnull File file, @Nonnull String mimeType) {
 
         if (!file.isFile()) {
             throw new IllegalArgumentException("Input isn't a file !");
@@ -87,7 +78,7 @@ public class MediaAndFilesApi {
      * @param fileLoc - file location (dialog internal API)
      * @return - A CompletableFuture for a String containing download url
      * @throws InterruptedException in concurrency issues
-     * @throws ExecutionException in concurrency issues
+     * @throws ExecutionException   in concurrency issues
      */
     public CompletableFuture<String> getFileUrl(FileLocation fileLoc) throws InterruptedException, ExecutionException {
         return privateBot
@@ -116,18 +107,20 @@ public class MediaAndFilesApi {
             entity = new FileEntity(file, ContentType.create(mimeType));
         }
         request.setEntity(entity);
-        System.out.println("Executing request ->" + request.getRequestLine());
+        log.debug("Executing request ->" + request.getRequestLine());
         CloseableHttpResponse response = null;
         try {
             response = httpclient.execute(request);
-            System.out.println("Response ->" + response.getStatusLine());
+            log.debug("Response ->" + response.getStatusLine());
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to send file", e);
         } finally {
             try {
-                response.close();
+                if (response != null) {
+                    response.close();
+                }
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Failed to close response", e);
             }
         }
 

@@ -22,12 +22,13 @@ public class Main {
                             System.out.println("Got a message: " + message.getText() + " from user: " + user.getName());
                         })
                 ).thenCompose(aVoid -> {
-                            if (message.getText().equals("Send me photo")) {
-                                return bot.messaging().sendMedia(message.getPeer(), ((TextContent) message.getMessageContent()).getMedias());
-                            } else if (message.getText().equals("Send me video")) {
-                                return bot.messaging().sendDocument(message.getPeer(), (DocumentContent) message.getMessageContent());
-                            } else {
-                                return bot.messaging().reply(message.getPeer(), message.getMessageId(), "some reply");
+                            switch (message.getText()) {
+                                case "Send me photo":
+                                    return bot.messaging().sendMedia(message.getPeer(), ((TextContent) message.getMessageContent()).getMedias());
+                                case "Send me video":
+                                    return bot.messaging().sendDocument(message.getPeer(), (DocumentContent) message.getMessageContent());
+                                default:
+                                    return bot.messaging().reply(message.getPeer(), message.getMessageId(), "some reply");
                             }
                         }
                 ).exceptionally(ex -> {

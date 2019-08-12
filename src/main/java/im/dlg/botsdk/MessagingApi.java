@@ -11,6 +11,8 @@ import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.content.DocumentContent;
 import im.dlg.botsdk.light.MessageListener;
 import im.dlg.botsdk.utils.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -23,22 +25,21 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-
-import static dialog.MediaAndFilesOuterClass.*;
+import static dialog.MediaAndFilesOuterClass.FastThumb;
 
 /**
  * Central class for messaging API
  */
 public class MessagingApi {
 
+    private final Logger log = LoggerFactory.getLogger(MessagingApi.class);
+
     private InternalBotApi privateBot;
     private MessageListener onMessage = null;
-
 
     MessagingApi(InternalBotApi privateBot) {
         this.privateBot = privateBot;
@@ -69,8 +70,8 @@ public class MessagingApi {
                                 );
                     });
                 });
-            } catch (Throwable throwable) {
-                throwable.printStackTrace();
+            } catch (Throwable th) {
+                log.error("Failed to init MessagingApi", th);
             }
         });
     }
@@ -176,28 +177,22 @@ public class MessagingApi {
         String fileName = file.getName();
         int fileSize = (int) file.length();
 
-        try {
-            return MediaAndFilesApi.upLoadFile(file, "application/octet-stream").thenCompose(fileLocation -> {
-                DocumentMessage document = DocumentMessage
-                        .newBuilder()
-                        .setFileId(fileLocation.getFileId())
-                        .setAccessHash(fileLocation.getAccessHash())
-                        .setFileSize(fileSize)
-                        .setName(fileName)
-                        .setMimeType("application/octet-stream")
-                        .build();
+        return MediaAndFilesApi.upLoadFile(file, "application/octet-stream").thenCompose(fileLocation -> {
+            DocumentMessage document = DocumentMessage
+                    .newBuilder()
+                    .setFileId(fileLocation.getFileId())
+                    .setAccessHash(fileLocation.getAccessHash())
+                    .setFileSize(fileSize)
+                    .setName(fileName)
+                    .setMimeType("application/octet-stream")
+                    .build();
 
-                MessageContent msg = MessageContent.newBuilder()
-                        .setDocumentMessage(document)
-                        .build();
+            MessageContent msg = MessageContent.newBuilder()
+                    .setDocumentMessage(document)
+                    .build();
 
-                return send(peer, msg, null);
-            });
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-
-        return null;
+            return send(peer, msg, null);
+        });
     }
 
     public CompletableFuture<UUID> sendImage(@Nonnull final Peer peer, @Nonnull final File image) {
@@ -269,8 +264,6 @@ public class MessagingApi {
         } catch (IOException e) {
             resp = new CompletableFuture<>();
             resp.completeExceptionally(e);
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
         }
 
         return resp;
@@ -431,7 +424,7 @@ public class MessagingApi {
             return;
         }
 
-        System.out.println("Got a message");
+        log.debug("Got a message");
     }
 
     public enum Direction {

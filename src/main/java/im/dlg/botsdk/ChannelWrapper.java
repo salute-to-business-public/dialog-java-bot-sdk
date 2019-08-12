@@ -6,12 +6,16 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 public class ChannelWrapper {
+
+    private final Logger log = LoggerFactory.getLogger(ChannelWrapper.class);
 
     private ManagedChannel channel;
     private BotConfig botConfig;
@@ -50,7 +54,7 @@ public class ChannelWrapper {
             this.channel = nettyChannelBuilder.build();
 
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("failed to connect", ex);
         }
     }
 
