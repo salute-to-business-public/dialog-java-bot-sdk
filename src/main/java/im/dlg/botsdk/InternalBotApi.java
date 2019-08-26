@@ -333,4 +333,8 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     AtomicInteger getSeq() {
         return seq;
     }
+
+    AsyncHttpClient getHttpClient() {
+        return httpClient;
+    }
 }
