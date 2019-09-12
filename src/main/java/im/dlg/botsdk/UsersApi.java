@@ -8,6 +8,7 @@ import im.dlg.botsdk.utils.PeerUtils;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -75,12 +76,24 @@ public class UsersApi {
         }, privateBot.executor.getExecutor());
     }
 
+    /**
+     * Return user's peer by id
+     *
+     * @param userId - user's id
+     * @return future with the user's peer
+     */
     public CompletableFuture<Optional<Peer>> findUserPeer(Integer userId) {
         return privateBot.findUserOutPeer(userId)
                 .thenApply(u -> u.map(PeerUtils::toDomainPeer));
     }
 
-    public CompletableFuture<List<User>> searchUserByNick(String query) {
+    /**
+     * Return list users for a substring of nick's (not complete coincidence!)
+     *
+     * @param query - user's nick substring
+     * @return future with the users list
+     */
+    public CompletableFuture<List<User>> searchUsersByNickSubstring(String query) {
         SearchOuterClass.RequestPeerSearch request = SearchOuterClass.RequestPeerSearch.newBuilder()
                 .addQuery(SearchOuterClass.SearchCondition.newBuilder()
                         .setSearchPeerTypeCondition(SearchOuterClass.SearchPeerTypeCondition.newBuilder()
@@ -116,5 +129,89 @@ public class UsersApi {
                         ""
                 )
         ).collect(Collectors.toList()), privateBot.executor.getExecutor());
+    }
+
+    /**
+     * Return user (list) info for a nick
+     *
+     * @param nick - user's nick
+     * @return future with the user data
+     */
+    public CompletableFuture<List<User>> searchUserByNick(String nick) {
+        ContactsOuterClass.RequestSearchContacts request = ContactsOuterClass.RequestSearchContacts.newBuilder()
+                .setRequest(nick)
+                .build();
+
+
+        return privateBot.withToken(
+                ContactsGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.searchContacts(request)
+        ).thenApplyAsync(res -> res.getUsersList().stream().map(u ->
+                new User(
+                        new Peer(
+                                u.getId(),
+                                Peer.PeerType.PRIVATE,
+                                u.getAccessHash()
+                        ),
+                        u.getData().getName(),
+                        u.getData().getNick().getValue(),
+                        User.Sex.fromServerModel(u.getData().getSex()),
+                        "",
+                        "",
+                        u.getData().getTimeZone(),
+                        ""
+                )
+        ).collect(Collectors.toList()), privateBot.executor.getExecutor());
+    }
+
+    /**
+     * Return user's OutPeer for a nick
+     *
+     * @param nick - user's nick
+     * @return future with the user OutPeer
+     */
+    public CompletableFuture<Optional<Peers.OutPeer>> findUserOutPeerByNick(String nick) throws ExecutionException, InterruptedException {
+        PeersApi peersApi = new PeersApi(privateBot);
+        Integer id = peersApi.resolvePeer(nick).get().getId();
+        return privateBot.findUserOutPeer(id);
+    }
+
+    /**
+     * Return user's full info for a nick
+     *
+     * @param nick - user's nick
+     * @return future with the user FullInfo
+     */
+    public CompletableFuture<UsersOuterClass.FullUser> getUserFullProfileByNick(String nick) throws ExecutionException, InterruptedException {
+        PeersApi peersApi = new PeersApi(privateBot);
+        CompletableFuture<Peer> peer = peersApi.resolvePeer(nick);
+        Peers.UserOutPeer outPeer = Peers.UserOutPeer.newBuilder()
+                .setAccessHash(peer.get().getAccessHash())
+                .setUid(peer.get().getId())
+                .build();
+        if (outPeer.getAccessHash() == 0 && outPeer.getUid() == 0) return null;
+        UsersOuterClass.RequestLoadFullUsers request = UsersOuterClass.RequestLoadFullUsers.newBuilder()
+                .addUserPeers(outPeer)
+                .build();
+
+        return privateBot.withToken(
+                UsersGrpc.newFutureStub(privateBot.channel.getChannel()),
+                stub -> stub.loadFullUsers(request)
+        ).thenApplyAsync(res -> {
+            if (res.getFullUsersCount() > 0)
+                return res.getFullUsers(0);
+            return null;
+        });
+    }
+
+    /**
+     * Return user's custom profile for a nick
+     *
+     * @param nick - user's nick
+     * @return CustomProfile
+     */
+    public String getUserCustomProfileByNick(String nick) throws ExecutionException, InterruptedException {
+        return getUserFullProfileByNick(nick) != null ?
+        getUserFullProfileByNick(nick).get().getCustomProfile() : null;
     }
 }

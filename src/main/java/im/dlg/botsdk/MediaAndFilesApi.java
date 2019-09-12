@@ -94,7 +94,7 @@ public class MediaAndFilesApi {
     }
 
     /**
-     * Helper function to perform HTPP PUT request from a file to server
+     * Helper function to perform HTTP PUT request from a file to server
      *
      * @param file      - file to upload
      * @param upLoadUrl - url to execute PUT request on server

@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -55,23 +56,30 @@ public class InteractiveApi {
     }
 
     /**
-     * Send an interactive action group to particular peer
+     * Send an interactive action group and text to particular peer
      *
      * @param peer  - the address peer user/channel/group
      * @param group - group of interactive elements
+     * @param text - message text (may be null)
      * @return - future with message UUID, that completes when deliver to server
      */
     @SuppressWarnings("unused")
-    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group) {
-
-        RequestSendMessage request = RequestSendMessage.newBuilder()
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group, @Nullable String text) {
+        RequestSendMessage.Builder request = RequestSendMessage.newBuilder()
                 .setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
                 .setPeer(PeerUtils.toServerOutPeer(peer))
-                .setMessage(buildMessageContent(group)).build();
+                .setMessage(buildMessageContent(group));
+
+        if (text != null){
+            MessageContent msg = MessageContent.newBuilder()
+                    .setTextMessage(TextMessage.newBuilder().setText(text).build())
+                    .build();
+            request.setMessage(msg);
+        }
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.sendMessage(request)
+                stub -> stub.sendMessage(request.build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
     }
 
@@ -80,22 +88,29 @@ public class InteractiveApi {
      *
      * @param uuid  - message UUID
      * @param group - new widgets group
+     * @param text - message text (may be null)
      * @return - future with message UUID, that completes when deliver to server
      */
     @SuppressWarnings("unused")
-    public CompletableFuture<UUID> update(@Nonnull UUID uuid, @Nonnull InteractiveGroup group) {
+    public CompletableFuture<UUID> update(@Nonnull UUID uuid, @Nonnull InteractiveGroup group, @Nullable String text) {
 
         Date date = new Date();
 
-        RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
+        RequestUpdateMessage.Builder request = RequestUpdateMessage.newBuilder()
                 .setMid(UUIDUtils.convertToApi(uuid))
                 .setUpdatedMessage(buildMessageContent(group))
-                .setLastEditedAt(date.getTime())
-                .build();
+                .setLastEditedAt(date.getTime());
+
+        if (text != null){
+            MessageContent msg = MessageContent.newBuilder()
+                    .setTextMessage(TextMessage.newBuilder().setText(text).build())
+                    .build();
+            request.setUpdatedMessage(msg);
+        }
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.updateMessage(request)
+                stub -> stub.updateMessage(request.build())
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
     }
 

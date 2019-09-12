@@ -122,6 +122,12 @@ public class MessagingApi {
         ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
     }
 
+    /**
+     * Delete message by message Id
+     *
+     * @param messageId  - subj
+     * @return - future with message UUID which has been deleted
+     */
     public CompletableFuture<UUID> delete(@Nonnull UUID messageId) {
         Date date = new Date();
         BoolValue boolValue = BoolValue.newBuilder().setValue(false).build();
@@ -195,6 +201,13 @@ public class MessagingApi {
         });
     }
 
+    /**
+     * Sending a file to peer
+     *
+     * @param peer - address peer
+     * @param image - java file reference
+     * @return UUID - message id
+     */
     public CompletableFuture<UUID> sendImage(@Nonnull final Peer peer, @Nonnull final File image) {
         if (!image.exists()) {
             new CompletableFuture<>().completeExceptionally(
@@ -282,6 +295,31 @@ public class MessagingApi {
                 .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
         return send(peer, msg, targetUser);
+    }
+
+    /**
+     * Update plain text to particular peer by message id
+     *
+     * @param messageId  - the message id
+     * @param text       - text of message
+     * @return           - future with message UUID, that completes when deliver to server
+     */
+    public CompletableFuture<UUID> update(UUID messageId, String text){
+        Date date = new Date();
+        MessageContent messageContent = MessageContent.newBuilder()
+                .setTextMessage(TextMessage.newBuilder().setText(text).build())
+                .build();
+        RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
+                .setMid(UUIDUtils.convertToApi(messageId))
+                .setLastEditedAt(date.getTime())
+                .setUpdatedMessage(messageContent)
+                .build();
+
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
+                stub -> stub.updateMessage(request)
+        ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
     }
 
     /**
