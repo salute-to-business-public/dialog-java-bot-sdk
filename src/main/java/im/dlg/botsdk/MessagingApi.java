@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -62,10 +63,16 @@ public class MessagingApi {
                                 .thenAcceptAsync(optSenderOutPeer ->
                                         optSenderOutPeer.ifPresent(senderOutPeer -> {
                                             final UUID uuid = UUIDUtils.convert(msg.getMid());
-                                            onReceiveMessage(new Message(
-                                                    PeerUtils.toDomainPeer(outPeer),
-                                                    PeerUtils.toDomainPeer(senderOutPeer),
-                                                    uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
+                                            try {
+                                                onReceiveMessage(new Message(
+                                                        PeerUtils.toDomainPeer(outPeer),
+                                                        PeerUtils.toDomainPeer(senderOutPeer),
+                                                        uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
+                                            } catch (ExecutionException e) {
+                                                e.printStackTrace();
+                                            } catch (InterruptedException e) {
+                                                e.printStackTrace();
+                                            }
                                         })
                                 );
                     });
@@ -456,7 +463,7 @@ public class MessagingApi {
         ).thenApplyAsync(resp -> null, privateBot.executor.getExecutor());
     }
 
-    private void onReceiveMessage(@Nonnull Message message) {
+    private void onReceiveMessage(@Nonnull Message message) throws ExecutionException, InterruptedException {
         if (onMessage != null) {
             onMessage.onMessage(message);
             return;

@@ -185,9 +185,19 @@ public class UsersApi {
     public CompletableFuture<UsersOuterClass.FullUser> getUserFullProfileByNick(String nick) throws ExecutionException, InterruptedException {
         PeersApi peersApi = new PeersApi(privateBot);
         CompletableFuture<Peer> peer = peersApi.resolvePeer(nick);
+        return getUserFullProfileByPeer(peer.get());
+    }
+
+    /**
+     * Return user's full info for a nick
+     *
+     * @param peer - user's peer
+     * @return future with the user FullInfo
+     */
+    public CompletableFuture<UsersOuterClass.FullUser> getUserFullProfileByPeer(Peer peer) throws ExecutionException, InterruptedException {
         Peers.UserOutPeer outPeer = Peers.UserOutPeer.newBuilder()
-                .setAccessHash(peer.get().getAccessHash())
-                .setUid(peer.get().getId())
+                .setAccessHash(peer.getAccessHash())
+                .setUid(peer.getId())
                 .build();
         if (outPeer.getAccessHash() == 0 && outPeer.getUid() == 0) return null;
         UsersOuterClass.RequestLoadFullUsers request = UsersOuterClass.RequestLoadFullUsers.newBuilder()
@@ -213,5 +223,16 @@ public class UsersApi {
     public String getUserCustomProfileByNick(String nick) throws ExecutionException, InterruptedException {
         return getUserFullProfileByNick(nick) != null ?
         getUserFullProfileByNick(nick).get().getCustomProfile() : null;
+    }
+
+    /**
+     * Return user's custom profile for a nick
+     *
+     * @param peer - user's peer
+     * @return CustomProfile
+     */
+    public String getUserCustomProfileByPeer(Peer peer) throws ExecutionException, InterruptedException {
+        return getUserFullProfileByPeer(peer) != null ?
+                getUserFullProfileByPeer(peer).get().getCustomProfile() : null;
     }
 }
