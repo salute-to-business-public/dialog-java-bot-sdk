@@ -56,6 +56,30 @@ public class InteractiveApi {
     }
 
     /**
+     * Send an interactive action group to particular peer
+     *
+     * @param peer  - the address peer user/channel/group
+     * @param group - group of interactive elements
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    @SuppressWarnings("unused")
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group) {
+        return send(peer, group, null);
+    }
+
+    /**
+     * Update the interactive message, change elements
+     *
+     * @param uuid  - message UUID
+     * @param group - new widgets group
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    @SuppressWarnings("unused")
+    public CompletableFuture<UUID> update(@Nonnull UUID uuid, @Nonnull InteractiveGroup group) {
+        return update(uuid, group, null);
+    }
+
+    /**
      * Send an interactive action group and text to particular peer
      *
      * @param peer  - the address peer user/channel/group
@@ -67,15 +91,11 @@ public class InteractiveApi {
     public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group, @Nullable String text) {
         RequestSendMessage.Builder request = RequestSendMessage.newBuilder()
                 .setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
-                .setPeer(PeerUtils.toServerOutPeer(peer))
-                .setMessage(buildMessageContent(group));
+                .setPeer(PeerUtils.toServerOutPeer(peer));
 
-        if (text != null){
-            MessageContent msg = MessageContent.newBuilder()
-                    .setTextMessage(TextMessage.newBuilder().setText(text).build())
-                    .build();
-            request.setMessage(msg);
-        }
+        if (text != null) {
+            request.setMessage(buildMessageContent(group, text));
+        } else { request.setMessage(buildMessageContent(group)); }
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
@@ -93,20 +113,15 @@ public class InteractiveApi {
      */
     @SuppressWarnings("unused")
     public CompletableFuture<UUID> update(@Nonnull UUID uuid, @Nonnull InteractiveGroup group, @Nullable String text) {
-
         Date date = new Date();
 
         RequestUpdateMessage.Builder request = RequestUpdateMessage.newBuilder()
                 .setMid(UUIDUtils.convertToApi(uuid))
-                .setUpdatedMessage(buildMessageContent(group))
                 .setLastEditedAt(date.getTime());
 
-        if (text != null){
-            MessageContent msg = MessageContent.newBuilder()
-                    .setTextMessage(TextMessage.newBuilder().setText(text).build())
-                    .build();
-            request.setUpdatedMessage(msg);
-        }
+        if (text != null) {
+            request.setUpdatedMessage(buildMessageContent(group, text));
+        } else { request.setUpdatedMessage(buildMessageContent(group)); }
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
@@ -115,6 +130,10 @@ public class InteractiveApi {
     }
 
     private MessageContent buildMessageContent(InteractiveGroup group) {
+        return buildMessageContent(group, null);
+    }
+
+    private MessageContent buildMessageContent(InteractiveGroup group, String text) {
 
         InteractiveMediaGroup.Builder apiMediaGroup =
                 InteractiveMediaGroup.newBuilder();
@@ -150,9 +169,14 @@ public class InteractiveApi {
 
         MessageMedia messageMedia = MessageMedia.newBuilder().addActions(apiMediaGroup).build();
 
+        TextMessage.Builder text_and_media = TextMessage.newBuilder().addMedia(messageMedia);
+        if (text != null) {
+            text_and_media.setText(text);
+        }
+
         return MessageContent.newBuilder()
-                .setTextMessage(TextMessage.newBuilder()
-                        .addMedia(messageMedia)).build();
+                .setTextMessage(text_and_media.build())
+                .build();
     }
 
     private InteractiveMediaWidget buildButton(InteractiveButton button) {

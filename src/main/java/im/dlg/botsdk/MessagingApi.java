@@ -63,16 +63,10 @@ public class MessagingApi {
                                 .thenAcceptAsync(optSenderOutPeer ->
                                         optSenderOutPeer.ifPresent(senderOutPeer -> {
                                             final UUID uuid = UUIDUtils.convert(msg.getMid());
-                                            try {
-                                                onReceiveMessage(new Message(
-                                                        PeerUtils.toDomainPeer(outPeer),
-                                                        PeerUtils.toDomainPeer(senderOutPeer),
-                                                        uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
-                                            } catch (ExecutionException e) {
-                                                e.printStackTrace();
-                                            } catch (InterruptedException e) {
-                                                e.printStackTrace();
-                                            }
+                                            onReceiveMessage(new Message(
+                                                    PeerUtils.toDomainPeer(outPeer),
+                                                    PeerUtils.toDomainPeer(senderOutPeer),
+                                                    uuid, text, msg.getDate(), Content.fromMessage(msg.getMessage())));
                                         })
                                 );
                     });
@@ -132,33 +126,6 @@ public class MessagingApi {
     /**
      * Delete message by message Id
      *
-     * @param mids  - ids of messages
-     * @return - future with message UUID which has been deleted
-     */
-    public CompletableFuture<UUID> delete(@Nonnull List<UUID> mids) {
-        Date date = new Date();
-        BoolValue boolValue = BoolValue.newBuilder().setValue(false).build();
-        DeletedMessage deletedMessage = DeletedMessage.newBuilder()
-                .setIsLocal(boolValue)
-                .build();
-        MessageContent messageContent = MessageContent.newBuilder()
-                .setDeletedMessage(deletedMessage)
-                .build();
-        RequestUpdateMessage.Builder request = RequestUpdateMessage.newBuilder();
-        IntStream.range(0, mids.size()).forEach(index -> request.setMid(UUIDUtils.convertToApi(mids.get(index))));
-        request.setLastEditedAt(date.getTime())
-                .setUpdatedMessage(messageContent);
-
-        return privateBot.withToken(
-                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
-                        .withDeadlineAfter(2, TimeUnit.MINUTES),
-                stub -> stub.updateMessage(request.build())
-        ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
-    }
-
-    /**
-     * Delete message by message Id
-     *
      * @param messageId  - subj
      * @return - future with message UUID which has been deleted
      */
@@ -174,8 +141,8 @@ public class MessagingApi {
         RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
                 .setMid(UUIDUtils.convertToApi(messageId))
                 .setLastEditedAt(date.getTime())
-                .setUpdatedMessage(messageContent).
-                build();
+                .setUpdatedMessage(messageContent)
+                .build();
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
@@ -510,7 +477,7 @@ public class MessagingApi {
         ).thenApplyAsync(resp -> null, privateBot.executor.getExecutor());
     }
 
-    private void onReceiveMessage(@Nonnull Message message) throws ExecutionException, InterruptedException {
+    private void onReceiveMessage(@Nonnull Message message) {
         if (onMessage != null) {
             onMessage.onMessage(message);
             return;
