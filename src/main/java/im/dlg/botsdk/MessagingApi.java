@@ -157,6 +157,34 @@ public class MessagingApi {
     }
 
     /**
+     * Delete message by message Id
+     *
+     * @param messageId  - subj
+     * @return - future with message UUID which has been deleted
+     */
+    public CompletableFuture<UUID> delete(@Nonnull UUID messageId) {
+        Date date = new Date();
+        BoolValue boolValue = BoolValue.newBuilder().setValue(false).build();
+        DeletedMessage deletedMessage = DeletedMessage.newBuilder()
+                .setIsLocal(boolValue)
+                .build();
+        MessageContent messageContent = MessageContent.newBuilder()
+                .setDeletedMessage(deletedMessage)
+                .build();
+        RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
+                .setMid(UUIDUtils.convertToApi(messageId))
+                .setLastEditedAt(date.getTime())
+                .setUpdatedMessage(messageContent).
+                build();
+
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
+                stub -> stub.updateMessage(request)
+        ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
+    }
+
+    /**
      * Send plain text to particular peer
      *
      * @param peer - the address peer user/channel/group
@@ -333,6 +361,25 @@ public class MessagingApi {
      *
      * @param peer      - the address peer user/channel/group
      * @param messageId - the message id reply to
+     * @param text      - reply text
+     * @return - future with message UUID, that completes when deliver to server
+     */
+    public CompletableFuture<UUID> reply(@Nonnull Peer peer, @Nonnull UUID messageId, @Nonnull String text) {
+        MessageContent msg = MessageContent.newBuilder()
+                .setTextMessage(TextMessage.newBuilder().setText(text).build())
+                .build();
+
+        ReferencedMessages reply = ReferencedMessages.newBuilder()
+                .addMids(UUIDUtils.convertToApi(messageId))
+                .build();
+        return send(peer, msg, null, reply, null);
+    }
+
+    /**
+     * Reply on specific message
+     *
+     * @param peer      - the address peer user/channel/group
+     * @param messageId - the message ids (array) reply to
      * @param text      - reply text
      * @return - future with message UUID, that completes when deliver to server
      */
