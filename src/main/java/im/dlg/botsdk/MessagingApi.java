@@ -132,10 +132,10 @@ public class MessagingApi {
     /**
      * Delete message by message Id
      *
-     * @param messageId  - subj
+     * @param mids  - ids of messages
      * @return - future with message UUID which has been deleted
      */
-    public CompletableFuture<UUID> delete(@Nonnull UUID messageId) {
+    public CompletableFuture<UUID> delete(@Nonnull List<UUID> mids) {
         Date date = new Date();
         BoolValue boolValue = BoolValue.newBuilder().setValue(false).build();
         DeletedMessage deletedMessage = DeletedMessage.newBuilder()
@@ -144,16 +144,15 @@ public class MessagingApi {
         MessageContent messageContent = MessageContent.newBuilder()
                 .setDeletedMessage(deletedMessage)
                 .build();
-        RequestUpdateMessage request = RequestUpdateMessage.newBuilder()
-                .setMid(UUIDUtils.convertToApi(messageId))
-                .setLastEditedAt(date.getTime())
-                .setUpdatedMessage(messageContent)
-                .build();
+        RequestUpdateMessage.Builder request = RequestUpdateMessage.newBuilder();
+        IntStream.range(0, mids.size()).forEach(index -> request.setMid(UUIDUtils.convertToApi(mids.get(index))));
+        request.setLastEditedAt(date.getTime())
+                .setUpdatedMessage(messageContent);
 
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
-                stub -> stub.updateMessage(request)
+                stub -> stub.updateMessage(request.build())
         ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
     }
 
@@ -337,13 +336,14 @@ public class MessagingApi {
      * @param text      - reply text
      * @return - future with message UUID, that completes when deliver to server
      */
-    public CompletableFuture<UUID> reply(@Nonnull Peer peer, @Nonnull UUID messageId, @Nonnull String text) {
+    public CompletableFuture<UUID> reply(@Nonnull Peer peer, @Nonnull List<UUID> messageId, @Nonnull String text) {
         MessageContent msg = MessageContent.newBuilder()
                 .setTextMessage(TextMessage.newBuilder().setText(text).build())
                 .build();
 
-        ReferencedMessages reply = ReferencedMessages.newBuilder().addMids(UUIDUtils.convertToApi(messageId)).build();
-        return send(peer, msg, null, reply, null);
+        ReferencedMessages.Builder reply = ReferencedMessages.newBuilder();
+        IntStream.range(0, messageId.size()).forEach(index -> reply.addMids(UUIDUtils.convertToApi(messageId.get(index))));
+        return send(peer, msg, null, reply.build(), null);
     }
 
     /**
@@ -372,7 +372,7 @@ public class MessagingApi {
                 .newBuilder();
         IntStream.range(0, medias.size())
                 .forEach(index ->
-                        textMessage.setMedia(index, medias.get(index)));
+                        textMessage.addMedia(medias.get(index)));
 
         MessageContent msg = MessageContent.newBuilder()
                 .setTextMessage(textMessage.build())
