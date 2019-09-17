@@ -2,7 +2,9 @@ package im.dlg.botsdk;
 
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.ByteString;
+import dialog.Definitions;
 import dialog.MessagingGrpc;
+import dialog.MessagingOuterClass;
 import dialog.MessagingOuterClass.*;
 import dialog.Peers;
 import im.dlg.botsdk.domain.Message;
@@ -21,6 +23,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -149,6 +152,29 @@ public class MessagingApi {
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.updateMessage(request)
         ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
+    }
+
+    /**
+     * Delete list of messages by message Id
+     *
+     * @param messageIds  - subj
+     */
+    public void delete(List<UUID> messageIds){
+        List<Definitions.UUIDValue> mids = new ArrayList<Definitions.UUIDValue>();
+        for (UUID mid: messageIds){
+            mids.add(Definitions.UUIDValue.newBuilder()
+                    .setLsb(mid.getLeastSignificantBits())
+                    .setMsb(mid.getMostSignificantBits())
+                    .build());
+        }
+        MessagingOuterClass.RequestDeleteMessageObsolete request = RequestDeleteMessageObsolete
+                .newBuilder()
+                .addAllMids(mids)
+                .build();
+        privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
+                stub -> stub.deleteMessageObsolete(request));
     }
 
     /**
