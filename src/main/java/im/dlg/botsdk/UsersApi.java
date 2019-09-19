@@ -142,7 +142,6 @@ public class UsersApi {
                 .setRequest(nick)
                 .build();
 
-
         return privateBot.withToken(
                 ContactsGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.searchContacts(request)
@@ -199,7 +198,9 @@ public class UsersApi {
                 .setAccessHash(peer.getAccessHash())
                 .setUid(peer.getId())
                 .build();
-        if (outPeer.getAccessHash() == 0 && outPeer.getUid() == 0) return null;
+        if (outPeer.getAccessHash() == 0 && outPeer.getUid() == 0) {
+            return null;
+        }
         UsersOuterClass.RequestLoadFullUsers request = UsersOuterClass.RequestLoadFullUsers.newBuilder()
                 .addUserPeers(outPeer)
                 .build();
@@ -222,7 +223,7 @@ public class UsersApi {
      */
     public String getUserCustomProfileByNick(String nick) throws ExecutionException, InterruptedException {
         return getUserFullProfileByNick(nick) != null ?
-        getUserFullProfileByNick(nick).get().getCustomProfile() : null;
+                getUserFullProfileByNick(nick).get().getCustomProfile() : null;
     }
 
     /**

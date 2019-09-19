@@ -169,13 +169,13 @@ public class InteractiveApi {
 
         MessageMedia messageMedia = MessageMedia.newBuilder().addActions(apiMediaGroup).build();
 
-        TextMessage.Builder text_and_media = TextMessage.newBuilder().addMedia(messageMedia);
+        TextMessage.Builder textAndMedia = TextMessage.newBuilder().addMedia(messageMedia);
         if (text != null) {
-            text_and_media.setText(text);
+            textAndMedia.setText(text);
         }
 
         return MessageContent.newBuilder()
-                .setTextMessage(text_and_media.build())
+                .setTextMessage(textAndMedia.build())
                 .build();
     }
 
