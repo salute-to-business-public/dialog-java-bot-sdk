@@ -5,11 +5,14 @@ import dialog.*;
 import im.dlg.botsdk.domain.Group;
 import im.dlg.botsdk.domain.GroupType;
 import im.dlg.botsdk.domain.Peer;
+import im.dlg.botsdk.domain.User;
+import im.dlg.botsdk.utils.PeerUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class GroupsApi {
 
@@ -20,16 +23,24 @@ public class GroupsApi {
     }
 
     public CompletableFuture<Group> createGroup(String title, String username) {
-        GroupsOuterClass.RequestCreateGroup request = GroupsOuterClass.RequestCreateGroup.newBuilder()
-                .setGroupType(GroupsOuterClass.GroupType.GROUPTYPE_GROUP)
+        return createGroup(title, username, null);
+    }
+
+    public CompletableFuture<Group> createGroup(String title, String username, List<User> users) {
+        GroupsOuterClass.RequestCreateGroup.Builder request = GroupsOuterClass.RequestCreateGroup.newBuilder();
+        if (users != null){
+            for (User user: users) {
+                request.addUsers(PeerUtils.toUserOutPeer(PeerUtils.toServerOutPeer(user.getPeer())));
+            }
+        }
+        request.setGroupType(GroupsOuterClass.GroupType.GROUPTYPE_GROUP)
                 .setTitle(title)
                 .setUsername(StringValue.of(username))
-                .setRid(LocalDateTime.now().getSecond())
-                .build();
+                .setRid(LocalDateTime.now().getSecond());
 
         return privateBot.withToken(
                 GroupsGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.createGroup(request)
+                stub -> stub.createGroup(request.build())
         ).thenApplyAsync(g -> {
             GroupsOuterClass.Group group = g.getGroup();
             return new Group(

@@ -38,22 +38,28 @@ public class MediaMessage {
     }
 
     public static MessagingOuterClass.MessageMedia buildMedia(MediaMessage media) {
-        MessagingOuterClass.ImageMedia image = MessagingOuterClass.ImageMedia
-                .newBuilder()
-                .setImage(ImageLocation.buildImageLocation(media.getImageMedia().getImageLocation()))
-                .build();
+        MessagingOuterClass.MessageMedia.Builder msg = MessagingOuterClass.MessageMedia.newBuilder();
+        if (media.getImageMedia() != null) {
+            MessagingOuterClass.ImageMedia image = MessagingOuterClass.ImageMedia
+                    .newBuilder()
+                    .setImage(ImageLocation.buildImageLocation(media.getImageMedia().getImageLocation()))
+                    .build();
+            msg.setImage(image);
+        }
 
-        MessagingOuterClass.AudioMedia audio = MessagingOuterClass.AudioMedia
-                .newBuilder()
-                .setAudio(AudioLocation.buildAudioLocation(media.getAudioMedia().getAudioLocation()))
-                .build();
+        if (media.getAudioMedia() != null) {
+            MessagingOuterClass.AudioMedia audio = MessagingOuterClass.AudioMedia
+                    .newBuilder()
+                    .setAudio(AudioLocation.buildAudioLocation(media.getAudioMedia().getAudioLocation()))
+                    .build();
+            msg.setAudio(audio);
+        }
 
-        MessagingOuterClass.WebpageMedia webpage = WebPageMedia.buildWebpage(media.getWebPageMedia());
+        if (media.getWebPageMedia() != null) {
+            MessagingOuterClass.WebpageMedia webpage = WebPageMedia.buildWebpage(media.getWebPageMedia());
+            msg.setWebpage(webpage);
+        }
 
-        return MessagingOuterClass.MessageMedia.newBuilder()
-                .setImage(image)
-                .setWebpage(webpage)
-                .setAudio(audio)
-                .build();
+        return msg.build();
     }
 }
