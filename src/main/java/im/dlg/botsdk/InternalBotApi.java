@@ -35,8 +35,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import static dialog.SequenceAndUpdatesOuterClass.*;
+
 // TODO: extract StreamObserver to different object
-class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqUpdateBox> {
+class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     private final Logger log = LoggerFactory.getLogger(InternalBotApi.class);
 
@@ -178,6 +180,22 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
         return findOutPeer(userPeer);
     }
 
+    CompletableFuture<ResponseGetReferencedEntitites> getRefEntities(Collection<Peers.UserOutPeer> userOutPeers, Collection<Peers.GroupOutPeer> groupOutPeers) {
+
+        RequestGetReferencedEntitites.Builder requestBuilder = RequestGetReferencedEntitites.newBuilder();
+
+        if (userOutPeers != null) {
+            requestBuilder.addAllUsers(userOutPeers);
+        }
+
+        if (groupOutPeers != null) {
+            requestBuilder.addAllGroups(groupOutPeers);
+        }
+
+        return withToken(SequenceAndUpdatesGrpc.newFutureStub(channel.getChannel()),
+                stub -> stub.getReferencedEntitites(requestBuilder.build()));
+    }
+
     private void putOutPeer(Peers.OutPeer outPeer) {
         outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), outPeer);
     }
@@ -250,14 +268,13 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
     }
 
     CompletableFuture<Integer> getDifference(int seq) {
-        SequenceAndUpdatesOuterClass.RequestGetDifference
-                request = SequenceAndUpdatesOuterClass.RequestGetDifference.newBuilder().setSeq(seq).build();
+        RequestGetDifference request = RequestGetDifference.newBuilder().setSeq(seq).build();
 
         return withToken(SequenceAndUpdatesGrpc.newFutureStub(channel.getChannel())
                 .withDeadlineAfter(2, TimeUnit.MINUTES), stub -> stub.getDifference(request))
                 .thenCompose(res -> {
 
-                    for (SequenceAndUpdatesOuterClass.UpdateSeqUpdate update : res.getUpdatesList()) {
+                    for (UpdateSeqUpdate update : res.getUpdatesList()) {
                         callListeners(update);
                     }
 
@@ -274,11 +291,11 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
 
     @Override
     @SuppressWarnings("unchecked")
-    public void onNext(SequenceAndUpdatesOuterClass.SeqUpdateBox value) {
+    public void onNext(SeqUpdateBox value) {
         try {
 
-            SequenceAndUpdatesOuterClass.UpdateSeqUpdate upd =
-                    SequenceAndUpdatesOuterClass.UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
+            UpdateSeqUpdate upd =
+                    UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
 
             int newSeq = upd.getSeq();
             if (newSeq <= this.seq.get()) {
@@ -293,7 +310,7 @@ class InternalBotApi implements StreamObserver<SequenceAndUpdatesOuterClass.SeqU
         }
     }
 
-    private void callListeners(SequenceAndUpdatesOuterClass.UpdateSeqUpdate upd) {
+    private void callListeners(UpdateSeqUpdate upd) {
         Object updateRaw = null;
 
         try {

@@ -10,9 +10,5 @@ public class Constants {
      * The collection of regular optimisations for request
      */
     public static final Set<Miscellaneous.UpdateOptimization> OPTIMISATIONS = Sets.newHashSet(
-            Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_STRIP_ENTITIES,
-            Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_STRIP_ENTITIES_V2,
-            Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_STRIP_COUNTERS,
-            Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_COMPACT_USERS
-    );
+            Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_STRIP_ENTITIES);
 }

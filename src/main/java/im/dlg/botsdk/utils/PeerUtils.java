@@ -48,6 +48,13 @@ public class PeerUtils {
                 .build();
     }
 
+    public static Peers.GroupOutPeer toGroupOutPeer(Peers.OutPeer outPeer) {
+        return Peers.GroupOutPeer.newBuilder()
+                .setGroupId(outPeer.getId())
+                .setAccessHash(outPeer.getAccessHash())
+                .build();
+    }
+
     public static Peers.Peer toUserPeer(Integer userId) {
         return Peers.Peer.newBuilder()
                 .setType(Peers.PeerType.PEERTYPE_PRIVATE)
