@@ -1,7 +1,10 @@
 package im.dlg.botsdk;
 
 import com.google.protobuf.StringValue;
-import dialog.*;
+import dialog.GroupsGrpc;
+import dialog.GroupsOuterClass;
+import dialog.SearchGrpc;
+import dialog.SearchOuterClass;
 import im.dlg.botsdk.domain.Group;
 import im.dlg.botsdk.domain.GroupType;
 import im.dlg.botsdk.domain.Peer;
@@ -12,7 +15,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class GroupsApi {
 
@@ -28,8 +30,8 @@ public class GroupsApi {
 
     public CompletableFuture<Group> createGroup(String title, String username, List<User> users) {
         GroupsOuterClass.RequestCreateGroup.Builder request = GroupsOuterClass.RequestCreateGroup.newBuilder();
-        if (users != null){
-            for (User user: users) {
+        if (users != null) {
+            for (User user : users) {
                 request.addUsers(PeerUtils.toUserOutPeer(PeerUtils.toServerOutPeer(user.getPeer())));
             }
         }
@@ -56,32 +58,29 @@ public class GroupsApi {
                 .addQuery(SearchOuterClass.SearchCondition.newBuilder()
                         .setSearchPeerTypeCondition(SearchOuterClass.SearchPeerTypeCondition.newBuilder()
                                 .setPeerTypeValue(SearchOuterClass.SearchPeerType.SEARCHPEERTYPE_GROUPS_VALUE)
-                                .build()
-                        )
-                )
+                                .build()))
                 .addQuery(SearchOuterClass.SearchCondition.newBuilder()
                         .setSearchPieceText(SearchOuterClass.SearchPieceText.newBuilder()
                                 .setQuery(query)
-                                .build()
-                        )
-                )
-                .addOptimizations(Miscellaneous.UpdateOptimization.UPDATEOPTIMIZATION_GROUPS_V2)
+                                .build()))
                 .build();
 
         return privateBot.withToken(
                 SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
-                stub -> stub.peerSearch(request)
-        ).thenApplyAsync(res -> res.getGroupsList().stream().map(g ->
-                new Group(
-                        g.getShortname().getValue(),
-                        g.getTitle(),
-                        new Peer(
-                                g.getId(),
-                                Peer.PeerType.GROUP,
-                                g.getAccessHash()
-                        ),
-                        GroupType.fromServer(g.getGroupType())
-                )
-        ).collect(Collectors.toList()), privateBot.executor.getExecutor());
+                stub -> stub.peerSearch(request))
+                .thenComposeAsync(searchResults -> privateBot.getRefEntities(null, searchResults.getGroupPeersList()), privateBot.executor.getExecutor())
+                .thenApplyAsync(res -> res.getGroupsList().stream().map(g -> {
+
+                            String shortname = g.getData() != null ? g.getData().getShortname().getValue()
+                                    : g.getShortname().getValue();
+                            String title = g.getData() != null ? g.getData().getTitle() : g.getTitle();
+
+                            return new Group(shortname, title,
+                                    new Peer(g.getId(), Peer.PeerType.GROUP, g.getAccessHash()),
+                                    GroupType.fromServer(g.getGroupType()));
+
+
+                        }
+                ).collect(Collectors.toList()), privateBot.executor.getExecutor());
     }
 }
