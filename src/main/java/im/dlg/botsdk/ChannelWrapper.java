@@ -35,7 +35,7 @@ public class ChannelWrapper {
             NettyChannelBuilder nettyChannelBuilder = (NettyChannelBuilder) ManagedChannelBuilder
                     .forAddress(botConfig.getHost(), botConfig.getPort())
                     .idleTimeout(15, TimeUnit.SECONDS)
-                    .keepAliveTime(2, TimeUnit.MINUTES);
+                    .keepAliveTime(30, TimeUnit.SECONDS);
 
             if (botConfig.getCertPath() != null && botConfig.getCertPassword() != null) {
 
