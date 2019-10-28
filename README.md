@@ -26,7 +26,8 @@ repositories {
 2) Add BOT dependency
 ```
 dependencies {
-    compile 'im.dlg:bot-sdk:2.0.0'
+    compile 'im.dlg:bot-sdk:2.0.1'
+    compile 'org.slf4j:slf4j-log4j12:1.7.27' //or any other slf4j provider
 }
 ```
 

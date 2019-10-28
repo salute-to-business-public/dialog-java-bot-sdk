@@ -33,7 +33,9 @@ public class ChannelWrapper {
             }
 
             NettyChannelBuilder nettyChannelBuilder = (NettyChannelBuilder) ManagedChannelBuilder
-                    .forAddress(botConfig.getHost(), botConfig.getPort());
+                    .forAddress(botConfig.getHost(), botConfig.getPort())
+                    .idleTimeout(15, TimeUnit.SECONDS)
+                    .keepAliveTime(30, TimeUnit.SECONDS);
 
             if (botConfig.getCertPath() != null && botConfig.getCertPassword() != null) {
 
@@ -43,8 +45,7 @@ public class ChannelWrapper {
                                         botConfig.getCertPassword()))
                                 .build();
 
-                nettyChannelBuilder = nettyChannelBuilder.sslContext(sslContext)
-                        .idleTimeout(10, TimeUnit.SECONDS);
+                nettyChannelBuilder = nettyChannelBuilder.sslContext(sslContext);
             }
 
             if (!botConfig.isSecure()) {

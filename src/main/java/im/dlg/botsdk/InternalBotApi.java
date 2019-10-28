@@ -40,6 +40,9 @@ import static dialog.SequenceAndUpdatesOuterClass.*;
 // TODO: extract StreamObserver to different object
 class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
+    private static final long RECONNECT_DELAY = 1000;
+    private static final Integer appId = 11011;
+
     private final Logger log = LoggerFactory.getLogger(InternalBotApi.class);
 
     DialogExecutor executor;
@@ -49,7 +52,6 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     private volatile Metadata metadata;
     private Map<String, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
-    private static Integer appId = 11011;
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
     private AtomicInteger seq = new AtomicInteger();
 
@@ -338,12 +340,22 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
     @Override
     public void onError(Throwable t) {
         log.error("onError", t);
+        try {
+            Thread.sleep(RECONNECT_DELAY);
+        } catch (InterruptedException e) {
+            log.error("onError.sleep", e);
+        }
         reconnect();
     }
 
     @Override
     public void onCompleted() {
         log.info("onCompleted");
+        try {
+            Thread.sleep(RECONNECT_DELAY);
+        } catch (InterruptedException e) {
+            log.error("onCompleted.sleep", e);
+        }
         reconnect();
     }
 

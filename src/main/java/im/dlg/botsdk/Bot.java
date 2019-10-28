@@ -33,6 +33,7 @@ public class Bot {
     private MediaAndFilesApi mediaAndFilesApi;
     private PeersApi peersApi;
     private SyncApi syncApi;
+    private BotProfileApi botProfileApil;
 
     private DialogExecutor executor;
     private AsyncHttpClient asyncHttpClient;
@@ -101,6 +102,7 @@ public class Bot {
         groupsApi = new GroupsApi(internalBotApi);
         peersApi = new PeersApi(internalBotApi);
         syncApi = new SyncApi(internalBotApi);
+        botProfileApil = new BotProfileApi(internalBotApi);
     }
 
     private static AsyncHttpClient createHttpClient(BotConfig botConfig) {
@@ -199,5 +201,10 @@ public class Bot {
     public SyncApi syncApi() {
         lock();
         return syncApi;
+    }
+
+    public BotProfileApi botProfileApi() {
+        lock();
+        return botProfileApil;
     }
 }

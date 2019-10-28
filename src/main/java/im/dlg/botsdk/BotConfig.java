@@ -74,7 +74,7 @@ public class BotConfig {
 
     public static final class Builder {
         String host;
-        int port;
+        int port = 443;
         boolean isSecure = true;
         String token;
         String certPath;

@@ -1,5 +1,7 @@
 package im.dlg.botsdk.domain;
 
+import java.util.Objects;
+
 public class Peer {
 
     private int id;
@@ -38,5 +40,21 @@ public class Peer {
                 ", type=" + type +
                 ", accessHash=" + accessHash +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Peer peer = (Peer) o;
+        return id == peer.id &&
+                accessHash == peer.accessHash &&
+                type == peer.type;
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(id, type, accessHash);
     }
 }
