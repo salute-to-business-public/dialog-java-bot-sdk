@@ -1,5 +1,7 @@
 package im.dlg.botsdk;
 
+import java.util.HashMap;
+
 /**
  * Main configuration file
  */
@@ -12,8 +14,10 @@ public class BotConfig {
     final private String certPath;
     final private String certPassword;
     final private String botName;
+    private final HashMap<String, Double> botRetryOptions;
 
-    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, String botName) {
+    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, 
+                      String botName, HashMap<String, Double> retryOptions) {
         this.host = host;
         this.port = port;
         this.isSecure = isSecure;
@@ -21,6 +25,7 @@ public class BotConfig {
         this.certPath = certPath;
         this.certPassword = certPassword;
         this.botName = botName;
+        this.botRetryOptions = retryOptions;
     }
 
     /**
@@ -72,6 +77,10 @@ public class BotConfig {
         return botName;
     }
 
+    public HashMap<String, Double> getRetryOptions() {
+        return botRetryOptions;
+    }
+
     public static final class Builder {
         String host;
         int port = 443;
@@ -80,6 +89,7 @@ public class BotConfig {
         String certPath;
         String certPassword;
         String botName = "JavaBot";
+        private HashMap<String, Double> botRetryOptions;
 
         public Builder() {
         }
@@ -122,9 +132,14 @@ public class BotConfig {
             this.botName = botName;
             return this;
         }
+        
+        public Builder withRetryOptions(HashMap<String, Double> retryOptions) {
+            this.botRetryOptions = retryOptions;
+            return this;
+        }
 
         public BotConfig build() {
-            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName);
+            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName, botRetryOptions);
         }
     }
 }

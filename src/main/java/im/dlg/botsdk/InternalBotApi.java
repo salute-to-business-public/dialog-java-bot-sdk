@@ -28,10 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -42,6 +39,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     private static final long RECONNECT_DELAY = 1000;
     private static final Integer appId = 11011;
+    private final HashMap<String, Double> defaultOptions = getDefaultOptions();
 
     private final Logger log = LoggerFactory.getLogger(InternalBotApi.class);
 
@@ -54,13 +52,14 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
     private Map<String, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
     private AtomicInteger seq = new AtomicInteger();
-
+    private HashMap<String, Double> retryOptions;
 
     InternalBotApi(BotConfig botConfig, DialogExecutor executor, AsyncHttpClient httpClient) {
         this.botConfig = botConfig;
         this.executor = executor;
         this.channel = new ChannelWrapper(this.botConfig);
         this.httpClient = httpClient;
+        this.retryOptions = setRetryOptions(botConfig.getRetryOptions());
     }
 
     CompletableFuture<Void> start() {
@@ -148,11 +147,27 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
         T newStub = MetadataUtils.attachHeaders(stub, metadata);
+        int retries = 0;
+        while (this.retryOptions != null) {
+            try {
+                R future = executor.convert(f.apply(newStub)).get();
+                return CompletableFuture.completedFuture(future);
+            } catch (Exception e) {
+                if (retries < this.retryOptions.get("maxRetries")) {
+                    retries++;
+                    sleep(Math.min(retries * this.retryOptions.get("delayFactor") * this.retryOptions.get("minDelay"),
+                            this.retryOptions.get("maxDelay")));
+                    log.error("Failed requests to server: ", e);
+                    continue;
+                }
+                return executor.convert(f.apply(newStub));
+            }
+        }
         return executor.convert(f.apply(newStub));
     }
 
     <T extends AbstractStub<T>, R> R withToken(Metadata meta, T stub, Function<T, R> f) {
-        T newStub = MetadataUtils.attachHeaders(stub, meta);
+        T newStub =  MetadataUtils.attachHeaders(stub, meta);
         return f.apply(newStub);
     }
 
@@ -291,6 +306,30 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
                 });
     }
 
+    private HashMap<String, Double> getDefaultOptions(){
+        HashMap<String, Double> defaultOptions = new HashMap<>();
+        defaultOptions.put("minDelay", 1000.0);
+        defaultOptions.put("maxDelay", 50000.0);
+        defaultOptions.put("delayFactor", Math.exp(1));
+        defaultOptions.put("maxRetries", 5.0);
+        return defaultOptions;
+    }
+
+    private HashMap<String, Double> setRetryOptions(HashMap<String, Double> retryOptions) {
+        HashMap<String, Double> result = new HashMap<>();
+        if (retryOptions == null)
+            return null;
+
+        this.defaultOptions.forEach((key, value) -> {
+            if (retryOptions.get(key) != null) {
+                result.put(key, retryOptions.get(key));
+            } else {
+                result.put(key, value);
+            }
+        });
+        return result;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public void onNext(SeqUpdateBox value) {
@@ -334,6 +373,14 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
             if (updateRaw.getClass().isAssignableFrom(entry.getKey())) {
                 entry.getValue().forEach(listener -> listener.onUpdate(up));
             }
+        }
+    }
+
+    private void sleep(double delay){
+        try {
+            Thread.sleep(Math.round(delay));
+        } catch (InterruptedException e) {
+            log.error("sleep.sleep", e);
         }
     }
 
