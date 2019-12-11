@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.Date;
 import java.util.concurrent.*;
 import java.util.function.Function;
 
@@ -37,19 +38,20 @@ public class RetriableTask<R> {
                     if (exception == null) {
                         future.complete(result);
                     } else {
-                        if (retries >= MAX_RETRIES) {
+                        if (retries > MAX_RETRIES) {
                             future.completeExceptionally(exception);
                             log.error("Failed max retries request to server: ", exception);
                         } else {
                             try {
                                 TimeUnit.SECONDS.sleep(Math.min(
-                                        Math.round(MIN_DELAY * Math.pow(DELAY_FACTOR, retries++)),
+                                        Math.round(MIN_DELAY * Math.pow(DELAY_FACTOR, retries)),
                                         MAX_DELAY)
                                 );
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
-                            log.error("Failed request to server: ", exception);
+                            retries++;
+                            if (retries <= MAX_RETRIES) log.error("Failed request to server: ", exception);
                             executeAsync(taskFuture);
                         }
                     }
