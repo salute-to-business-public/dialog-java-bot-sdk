@@ -1,6 +1,6 @@
 package im.dlg.botsdk;
 
-import java.util.HashMap;
+import im.dlg.botsdk.utils.RetryOptions;
 
 /**
  * Main configuration file
@@ -14,10 +14,10 @@ public class BotConfig {
     final private String certPath;
     final private String certPassword;
     final private String botName;
-    private final HashMap<String, Double> botRetryOptions;
+    final private RetryOptions botRetryOptions;
 
     private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, 
-                      String botName, HashMap<String, Double> retryOptions) {
+                      String botName, RetryOptions retryOptions) {
         this.host = host;
         this.port = port;
         this.isSecure = isSecure;
@@ -77,7 +77,7 @@ public class BotConfig {
         return botName;
     }
 
-    public HashMap<String, Double> getRetryOptions() {
+    public RetryOptions getRetryOptions() {
         return botRetryOptions;
     }
 
@@ -89,7 +89,7 @@ public class BotConfig {
         String certPath;
         String certPassword;
         String botName = "JavaBot";
-        private HashMap<String, Double> botRetryOptions;
+        RetryOptions botRetryOptions;
 
         public Builder() {
         }
@@ -133,7 +133,7 @@ public class BotConfig {
             return this;
         }
         
-        public Builder withRetryOptions(HashMap<String, Double> retryOptions) {
+        public Builder withRetryOptions(RetryOptions retryOptions) {
             this.botRetryOptions = retryOptions;
             return this;
         }
