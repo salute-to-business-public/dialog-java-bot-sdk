@@ -143,8 +143,8 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
         T newStub = MetadataUtils.attachHeaders(stub, metadata);
-        RetriableTask<R> task = new RetriableTask<>(this.retryOptions);
-        return task.executeAsync(executor.convert(f.apply(newStub)), 0);
+        TaskManager<R> task = new TaskManager<R>(executor.convert(f.apply(newStub)), this.retryOptions);
+        return task.scheduleTask(0);
     }
 
     <T extends AbstractStub<T>, R> R withToken(Metadata meta, T stub, Function<T, R> f) {
