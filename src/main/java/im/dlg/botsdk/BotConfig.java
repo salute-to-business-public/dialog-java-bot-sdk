@@ -12,8 +12,9 @@ public class BotConfig {
     final private String certPath;
     final private String certPassword;
     final private String botName;
+    final private int parallelism;
 
-    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, String botName) {
+    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, String botName, int parallelism) {
         this.host = host;
         this.port = port;
         this.isSecure = isSecure;
@@ -21,6 +22,7 @@ public class BotConfig {
         this.certPath = certPath;
         this.certPassword = certPassword;
         this.botName = botName;
+        this.parallelism = parallelism;
     }
 
     /**
@@ -72,6 +74,14 @@ public class BotConfig {
         return botName;
     }
 
+    /**
+     *
+     * @return Uses for parallism in DialogExecutor
+     */
+    public int getParallelism() {
+        return parallelism;
+    }
+
     public static final class Builder {
         String host;
         int port = 443;
@@ -80,6 +90,7 @@ public class BotConfig {
         String certPath;
         String certPassword;
         String botName = "JavaBot";
+        int parallelism = 4;
 
         public Builder() {
         }
@@ -123,8 +134,13 @@ public class BotConfig {
             return this;
         }
 
+        public Builder withParallelism(int parallelism) {
+            this.parallelism = parallelism;
+            return this;
+        }
+
         public BotConfig build() {
-            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName);
+            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName, parallelism);
         }
     }
 }
