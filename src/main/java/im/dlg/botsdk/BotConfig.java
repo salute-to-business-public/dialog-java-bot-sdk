@@ -80,8 +80,9 @@ public class BotConfig {
 
     public RetryOptions getRetryOptions() {
         return botRetryOptions;
+    }
 
-  /**
+    /**
      *
      * @return Uses for parallism in DialogExecutor
      */
