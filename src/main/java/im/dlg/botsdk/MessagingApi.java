@@ -28,7 +28,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -516,5 +515,20 @@ public class MessagingApi {
         FORWARD,
         BACKWARD,
         BOTH
+    }
+
+    /**
+     * Delete chat
+     * @param peer - peer chat
+     * @return a future
+     */
+    public CompletableFuture<Void> deleteChat(@Nonnull Peer peer) {
+        RequestDeleteChat request = RequestDeleteChat.newBuilder()
+                .setPeer(PeerUtils.toServerOutPeer(peer)).build();
+        return privateBot.withToken(
+                MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
+                        .withDeadlineAfter(2, TimeUnit.MINUTES),
+                stub -> stub.deleteChat(request)
+        ).thenApplyAsync(resp -> null, privateBot.executor.getExecutor());
     }
 }

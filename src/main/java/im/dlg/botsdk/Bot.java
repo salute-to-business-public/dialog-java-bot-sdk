@@ -46,7 +46,13 @@ public class Bot {
 
     private Bot(BotConfig botConfig) {
         this.botConfig = botConfig;
-        this.executor = new DialogExecutor(4);
+        if (botConfig.getParallelism() > 0) {
+            this.executor = new DialogExecutor(botConfig.getParallelism());
+        }
+        else {
+            this.executor = new DialogExecutor(4);
+        }
+
     }
 
 
