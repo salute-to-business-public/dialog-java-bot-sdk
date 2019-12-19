@@ -1,5 +1,7 @@
 package im.dlg.botsdk;
 
+import im.dlg.botsdk.utils.RetryOptions;
+
 /**
  * Main configuration file
  */
@@ -12,9 +14,10 @@ public class BotConfig {
     final private String certPath;
     final private String certPassword;
     final private String botName;
+    final private RetryOptions botRetryOptions;
     final private int parallelism;
 
-    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, String botName, int parallelism) {
+    private BotConfig(String host, int port, boolean isSecure, String token, String certPath, String certPassword, String botName, RetryOptions retryOptions, int parallelism) {
         this.host = host;
         this.port = port;
         this.isSecure = isSecure;
@@ -22,6 +25,7 @@ public class BotConfig {
         this.certPath = certPath;
         this.certPassword = certPassword;
         this.botName = botName;
+        this.botRetryOptions = retryOptions;
         this.parallelism = parallelism;
     }
 
@@ -74,6 +78,10 @@ public class BotConfig {
         return botName;
     }
 
+    public RetryOptions getRetryOptions() {
+        return botRetryOptions;
+    }
+
     /**
      *
      * @return Uses for parallism in DialogExecutor
@@ -90,6 +98,7 @@ public class BotConfig {
         String certPath;
         String certPassword;
         String botName = "JavaBot";
+        RetryOptions botRetryOptions;
         int parallelism = 4;
 
         public Builder() {
@@ -133,6 +142,11 @@ public class BotConfig {
             this.botName = botName;
             return this;
         }
+        
+        public Builder withRetryOptions(RetryOptions retryOptions) {
+            this.botRetryOptions = retryOptions;
+            return this;
+        }
 
         public Builder withParallelism(int parallelism) {
             this.parallelism = parallelism;
@@ -140,7 +154,7 @@ public class BotConfig {
         }
 
         public BotConfig build() {
-            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName, parallelism);
+            return new BotConfig(host, port, isSecure, token, certPath, certPassword, botName, botRetryOptions, parallelism);
         }
     }
 }

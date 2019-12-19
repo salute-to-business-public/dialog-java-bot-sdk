@@ -14,9 +14,7 @@ import dialog.MessagingOuterClass.RequestLoadDialogs;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.light.UpdateListener;
-import im.dlg.botsdk.utils.Constants;
-import im.dlg.botsdk.utils.PeerUtils;
-import im.dlg.botsdk.utils.UUIDUtils;
+import im.dlg.botsdk.utils.*;
 import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
@@ -28,10 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -42,7 +37,6 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     private static final long RECONNECT_DELAY = 1000;
     private static final Integer appId = 11011;
-
     private final Logger log = LoggerFactory.getLogger(InternalBotApi.class);
 
     DialogExecutor executor;
@@ -54,13 +48,14 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
     private Map<String, Peers.OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
     private AtomicInteger seq = new AtomicInteger();
-
+    private RetryOptions retryOptions;
 
     InternalBotApi(BotConfig botConfig, DialogExecutor executor, AsyncHttpClient httpClient) {
         this.botConfig = botConfig;
         this.executor = executor;
         this.channel = new ChannelWrapper(this.botConfig);
         this.httpClient = httpClient;
+        this.retryOptions = botConfig.getRetryOptions();
     }
 
     CompletableFuture<Void> start() {
@@ -148,7 +143,8 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
         T newStub = MetadataUtils.attachHeaders(stub, metadata);
-        return executor.convert(f.apply(newStub));
+        TaskManager<R> task = new TaskManager<R>(executor.convert(f.apply(newStub)), this.retryOptions);
+        return task.scheduleTask(0);
     }
 
     <T extends AbstractStub<T>, R> R withToken(Metadata meta, T stub, Function<T, R> f) {
