@@ -13,15 +13,12 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class Bot {
 
     private static final Logger log = LoggerFactory.getLogger(Bot.class);
-
-    private BotConfig botConfig;
 
     private final Object stopLock = new Object();
 
@@ -34,24 +31,12 @@ public class Bot {
     private PeersApi peersApi;
     private SyncApi syncApi;
     private BotProfileApi botProfileApil;
-
-    private DialogExecutor executor;
     private AsyncHttpClient asyncHttpClient;
 
-    private volatile CompletableFuture<Bot> voidCompletableFuture;
-
     private Bot() {
-        this.executor = new DialogExecutor(4);
     }
 
     private Bot(BotConfig botConfig) {
-        this.botConfig = botConfig;
-        if (botConfig.getParallelism() > 0) {
-            this.executor = new DialogExecutor(botConfig.getParallelism());
-        }
-        else {
-            this.executor = new DialogExecutor(4);
-        }
 
     }
 
@@ -65,19 +50,18 @@ public class Bot {
     public static CompletableFuture<Bot> start(String token) {
         Config config = ConfigFactory.load("dialog.conf").getConfig("dialog.botsdk");
 
-        BotConfig botConfig = new BotConfig.Builder().withToken(token)
+        BotConfig botConfig = BotConfig.Builder.newBuilder().withToken(token)
                 .withHost(config.getString("host"))
-                .withPort(config.getInt("port")).build();
+                .withPort(config.getInt("port"))
+                .build();
 
-        Bot instance = new Bot(botConfig);
-        instance.asyncHttpClient = createHttpClient(botConfig);
-        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor, instance.asyncHttpClient);
+        Bot bot = new Bot(botConfig);
+        bot.asyncHttpClient = createHttpClient(botConfig);
+        bot.internalBotApi = new InternalBotApi(botConfig, bot.asyncHttpClient);
 
-        instance.voidCompletableFuture = instance.internalBotApi.start().thenAccept(v -> {
-            instance.runApis(instance.internalBotApi);
-        }).thenCompose(aVoid -> CompletableFuture.completedFuture(instance));
-
-        return instance.voidCompletableFuture;
+        return bot.internalBotApi.start()
+                .thenAccept(v -> bot.runApis(bot.internalBotApi))
+                .thenCompose(aVoid -> CompletableFuture.completedFuture(bot));
     }
 
     /**
@@ -87,17 +71,13 @@ public class Bot {
      * @return Future that completes when bot authorised
      */
     public static CompletableFuture<Bot> start(BotConfig botConfig) {
-        Bot instance = new Bot();
-        instance.asyncHttpClient = createHttpClient(botConfig);
-        instance.internalBotApi = new InternalBotApi(botConfig, instance.executor, instance.asyncHttpClient);
+        Bot bot = new Bot();
+        bot.asyncHttpClient = createHttpClient(botConfig);
+        bot.internalBotApi = new InternalBotApi(botConfig, bot.asyncHttpClient);
 
-        instance.voidCompletableFuture = instance.internalBotApi.start().thenAccept(v -> {
-            instance.runApis(instance.internalBotApi);
-        }).thenCompose(aVoid -> CompletableFuture.completedFuture(instance));
-
-        System.setProperty("java.awt.headless", "true");
-
-        return instance.voidCompletableFuture;
+        return bot.internalBotApi.start()
+                .thenAccept(v -> bot.runApis(bot.internalBotApi))
+                .thenCompose(aVoid -> CompletableFuture.completedFuture(bot));
     }
 
     private void runApis(InternalBotApi internalBotApi) {
@@ -112,18 +92,19 @@ public class Bot {
     }
 
     private static AsyncHttpClient createHttpClient(BotConfig botConfig) {
-        final DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
+        DefaultAsyncHttpClientConfig.Builder builder = new DefaultAsyncHttpClientConfig.Builder();
+
         if (botConfig.getCertPath() != null && botConfig.getCertPassword() != null) {
             try {
                 SslContext sslContext = SslContextBuilder.forClient()
                         .keyManager(NetUtils.createKeyFactory(new File(botConfig.getCertPath()),
                                 botConfig.getCertPassword())).build();
                 builder.setSslContext(sslContext);
-
             } catch (Exception e) {
                 log.error("Failed to create http client", e);
             }
         }
+
         return asyncHttpClient(builder);
     }
 
@@ -154,19 +135,10 @@ public class Bot {
         }
     }
 
-    private void lock() {
-        try {
-            voidCompletableFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("Failed to take a lock", e);
-        }
-    }
-
     /**
      * @return the object to interact with messaging
      */
     public MessagingApi messaging() {
-        lock();
         return messagingApi;
     }
 
@@ -174,7 +146,6 @@ public class Bot {
      * @return the object to interact with users
      */
     public UsersApi users() {
-        lock();
         return users;
     }
 
@@ -182,7 +153,6 @@ public class Bot {
      * @return the object to interact with buttons/select menus
      */
     public InteractiveApi interactiveApi() {
-        lock();
         return interactiveApi;
     }
 
@@ -190,27 +160,23 @@ public class Bot {
      * @return the object to interact with different media files
      */
     public MediaAndFilesApi mediaAndFilesApi() {
-        lock();
         return mediaAndFilesApi;
     }
 
     public GroupsApi groupsApi() {
-        lock();
         return groupsApi;
     }
 
     public PeersApi peersApi() {
-        lock();
         return peersApi;
     }
 
     public SyncApi syncApi() {
-        lock();
         return syncApi;
     }
 
     public BotProfileApi botProfileApi() {
-        lock();
         return botProfileApil;
     }
+
 }

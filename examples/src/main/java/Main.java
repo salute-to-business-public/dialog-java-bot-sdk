@@ -9,7 +9,7 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
 
-        BotConfig botConfig = BotConfig.Builder.aBotConfig()
+        BotConfig botConfig = BotConfig.Builder.newBuilder()
                 .withHost("")
                 .withPort(443)
                 .withCertPath("")

@@ -1,4 +1,4 @@
-package im.dlg.botsdk.light;
+package im.dlg.botsdk.listeners;
 
 import com.google.protobuf.GeneratedMessageV3;
 

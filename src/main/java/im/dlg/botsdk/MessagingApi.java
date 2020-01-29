@@ -11,7 +11,7 @@ import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.content.Content;
 import im.dlg.botsdk.domain.content.DocumentContent;
-import im.dlg.botsdk.light.MessageListener;
+import im.dlg.botsdk.listeners.MessageListener;
 import im.dlg.botsdk.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,14 +57,14 @@ public class MessagingApi {
                     _text = String.valueOf(msg.getMessage().getDocumentMessage().getFileId());
                 }
 
-                final String text = _text;
+                String text = _text;
 
                 privateBot.findOutPeer(msg.getPeer()).thenAccept(optOutPeer -> {
                     optOutPeer.ifPresent(outPeer -> {
                         privateBot.loadSenderOutPeer(msg.getSenderUid(), outPeer, msg.getDate())
-                                .thenAcceptAsync(optSenderOutPeer ->
+                                .thenAccept(optSenderOutPeer ->
                                         optSenderOutPeer.ifPresent(senderOutPeer -> {
-                                            final UUID uuid = UUIDUtils.convert(msg.getMid());
+                                            UUID uuid = UUIDUtils.convert(msg.getMid());
                                             onReceiveMessage(new Message(
                                                     PeerUtils.toDomainPeer(outPeer),
                                                     PeerUtils.toDomainPeer(senderOutPeer),
@@ -105,8 +105,11 @@ public class MessagingApi {
                                          @Nullable ReferencedMessages forward) {
 
         Peers.OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
-        RequestSendMessage.Builder request = RequestSendMessage.newBuilder().setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
-                .setPeer(outPeer).setMessage(message);
+
+        RequestSendMessage.Builder request = RequestSendMessage.newBuilder()
+                .setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
+                .setPeer(outPeer)
+                .setMessage(message);
 
         if (targetUser != null) {
             request.setIsOnlyForUser(targetUser);
@@ -122,7 +125,7 @@ public class MessagingApi {
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.sendMessage(request.build())
-        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
+        ).thenApply(resp -> UUIDUtils.convert(resp.getMessageId()));
     }
 
     /**
@@ -150,7 +153,7 @@ public class MessagingApi {
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.updateMessage(request)
-        ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
+        ).thenApply(res -> UUIDUtils.convert(res.getMid()));
     }
 
     /**
@@ -160,7 +163,7 @@ public class MessagingApi {
      */
     public void delete(List<UUID> messageIds){
         List<Definitions.UUIDValue> mids = new ArrayList<Definitions.UUIDValue>();
-        for (UUID mid: messageIds){
+        for (UUID mid: messageIds) {
             mids.add(Definitions.UUIDValue.newBuilder()
                     .setLsb(mid.getLeastSignificantBits())
                     .setMsb(mid.getMostSignificantBits())
@@ -345,7 +348,7 @@ public class MessagingApi {
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.updateMessage(request)
-        ).thenApplyAsync(res -> UUIDUtils.convert(res.getMid()));
+        ).thenApply(res -> UUIDUtils.convert(res.getMid()));
     }
 
     /**
@@ -480,7 +483,7 @@ public class MessagingApi {
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.loadHistory(request.build())
-        ).thenApplyAsync(resp -> resp.getHistoryList().stream()
+        ).thenApply(resp -> resp.getHistoryList().stream()
                 .map(MsgUtils::toMessage).collect(Collectors.toList()));
     }
 
@@ -499,7 +502,7 @@ public class MessagingApi {
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.messageRead(request)
-        ).thenApplyAsync(resp -> null, privateBot.executor.getExecutor());
+        ).thenApply(resp -> null);
     }
 
     private void onReceiveMessage(@Nonnull Message message) {
@@ -524,11 +527,13 @@ public class MessagingApi {
      */
     public CompletableFuture<Void> deleteChat(@Nonnull Peer peer) {
         RequestDeleteChat request = RequestDeleteChat.newBuilder()
-                .setPeer(PeerUtils.toServerOutPeer(peer)).build();
+                .setPeer(PeerUtils.toServerOutPeer(peer))
+                .build();
+
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel())
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.deleteChat(request)
-        ).thenApplyAsync(resp -> null, privateBot.executor.getExecutor());
+        ).thenApply(resp -> null);
     }
 }

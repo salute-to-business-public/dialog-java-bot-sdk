@@ -13,12 +13,13 @@ import dialog.MessagingOuterClass.ListLoadMode;
 import dialog.MessagingOuterClass.RequestLoadDialogs;
 import im.dlg.botsdk.domain.Message;
 import im.dlg.botsdk.domain.content.Content;
-import im.dlg.botsdk.light.UpdateListener;
+import im.dlg.botsdk.listeners.UpdateListener;
 import im.dlg.botsdk.utils.*;
 import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
+import net.javacrumbs.futureconverter.java8guava.FutureConverter;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.asynchttpclient.AsyncHttpClient;
 import org.slf4j.Logger;
@@ -36,10 +37,11 @@ import static dialog.SequenceAndUpdatesOuterClass.*;
 class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     private static final long RECONNECT_DELAY = 1000;
-    private static final Integer appId = 11011;
+    private static final String DEVICE_TITLE = "BotWithToken";
+    private static final Integer APP_ID = 11011;
+
     private final Logger log = LoggerFactory.getLogger(InternalBotApi.class);
 
-    DialogExecutor executor;
     ChannelWrapper channel;
     private BotConfig botConfig;
     private AsyncHttpClient httpClient;
@@ -50,29 +52,27 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
     private AtomicInteger seq = new AtomicInteger();
     private RetryOptions retryOptions;
 
-    InternalBotApi(BotConfig botConfig, DialogExecutor executor, AsyncHttpClient httpClient) {
+    InternalBotApi(BotConfig botConfig, AsyncHttpClient httpClient) {
         this.botConfig = botConfig;
-        this.executor = executor;
         this.channel = new ChannelWrapper(this.botConfig);
         this.httpClient = httpClient;
         this.retryOptions = botConfig.getRetryOptions();
     }
 
     CompletableFuture<Void> start() {
-
         channel.connect();
-        String deviceTitle = "BotWithToken";
+
         CompletableFuture<Metadata> meta = new CompletableFuture<>();
 
-        return executor.convert(
+        return FutureConverter.toCompletableFuture(
                 RegistrationGrpc.newFutureStub(channel.getChannel()).registerDevice(
                         RegistrationOuterClass.RequestRegisterDevice.newBuilder()
-                                .setAppId(appId)
+                                .setAppId(APP_ID)
                                 .setAppTitle(this.botConfig.getBotName())
                                 .setDeviceTitle(this.botConfig.getBotName())
                                 .build()
                 )
-        ).whenCompleteAsync((res, t) -> {
+        ).whenComplete((res, t) -> {
             if (res != null) {
                 Metadata header = new Metadata();
                 Metadata.Key<String> key = Metadata.Key.of("x-auth-ticket", Metadata.ASCII_STRING_MARSHALLER);
@@ -80,44 +80,42 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
                 meta.complete(header);
                 metadata = header;
-                log.info("Bot registered with token = " + res.getToken());
+                log.info("Bot registered with token = {}", res.getToken());
             } else if (t != null) {
                 meta.completeExceptionally(t);
             }
-        }).thenComposeAsync(res -> meta).thenComposeAsync(m -> {
-
-
+        }).thenCompose(res -> meta).thenCompose(m -> {
             if (botConfig.getCertPath() != null && botConfig.getCertPassword() != null) {
-                return executor.convert(withToken(m,
+                return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel.getChannel()),
                         stub -> stub.startAnonymousAuth(
                                 AuthenticationOuterClass.RequestStartAnonymousAuth.newBuilder()
                                         .setApiKey("BotSdk")
-                                        .setAppId(appId)
-                                        .setDeviceTitle(deviceTitle)
+                                        .setAppId(APP_ID)
+                                        .setDeviceTitle(DEVICE_TITLE)
                                         .addPreferredLanguages("RU")
                                         .setTimeZone(StringValue.newBuilder().setValue("+3").build())
                                         .build()
                         )
-                )).thenApplyAsync(res -> new ImmutablePair<>(res.getUser(), m));
+                )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
             } else if (botConfig.getToken() != null) {
-                return executor.convert(withToken(m,
+                return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel.getChannel()),
                         stub -> stub.startTokenAuth(
                                 AuthenticationOuterClass.RequestStartTokenAuth.newBuilder()
                                         .setApiKey("BotSdk")
-                                        .setAppId(appId)
-                                        .setDeviceTitle(deviceTitle)
+                                        .setAppId(APP_ID)
+                                        .setDeviceTitle(DEVICE_TITLE)
                                         .addPreferredLanguages("RU")
                                         .setTimeZone(StringValue.newBuilder().setValue("+3").build())
                                         .setToken(botConfig.getToken())
                                         .build()
                         )
-                )).thenApplyAsync(res -> new ImmutablePair<>(res.getUser(), m));
+                )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
             } else {
                 return null;
             }
-        }).thenApplyAsync(p -> {
+        }).thenApply(p -> {
 
             withToken(p.getRight(),
                     SequenceAndUpdatesGrpc.newStub(channel.getChannel()),
@@ -127,7 +125,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
                     }
             );
 
-            log.info("Bot authorized with id = " + p.getLeft().getId());
+            log.info("Bot authorized with id = {}", p.getLeft().getId());
 
             return null;
         });
@@ -143,7 +141,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
 
     <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
         T newStub = MetadataUtils.attachHeaders(stub, metadata);
-        TaskManager<R> task = new TaskManager<R>(executor.convert(f.apply(newStub)), this.retryOptions);
+        TaskManager<R> task = new TaskManager<R>(FutureConverter.toCompletableFuture(f.apply(newStub)), this.retryOptions);
         return task.scheduleTask(0);
     }
 
@@ -157,7 +155,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
         return outPeerMap.containsKey(peerHash) ?
                 CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peerHash))) :
                 // implicitly load outPeers of loaded dialogs
-                loadDialogs(Sets.newHashSet(peer)).thenApplyAsync(x ->
+                loadDialogs(Sets.newHashSet(peer)).thenApply(x ->
                         outPeerMap.containsKey(peerHash) ? Optional.of(outPeerMap.get(peerHash)) : Optional.empty()
                 );
     }
@@ -168,7 +166,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
         return outPeerMap.containsKey(peerHash) ?
                 CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peerHash))) :
                 // implicitly load outPeers of loaded dialogs
-                load(peer, date, 2).thenApplyAsync(x ->
+                load(peer, date, 2).thenApply(x ->
                         outPeerMap.containsKey(peerHash) ? Optional.of(outPeerMap.get(peerHash)) : Optional.empty()
                 );
     }
@@ -179,7 +177,6 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
     }
 
     CompletableFuture<ResponseGetReferencedEntitites> getRefEntities(Collection<Peers.UserOutPeer> userOutPeers, Collection<Peers.GroupOutPeer> groupOutPeers) {
-
         RequestGetReferencedEntitites.Builder requestBuilder = RequestGetReferencedEntitites.newBuilder();
 
         if (userOutPeers != null) {
@@ -217,14 +214,16 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
                         .setPeer(peer)
                         .build()
                 )
-        ).thenApplyAsync(res -> {
+        ).thenApply(res -> {
             res.getGroupPeersList().forEach(this::putOutPeer);
             res.getUserPeersList().forEach(this::putOutPeer);
 
             List<HistoryMessage> historyList = res.getHistoryList();
             List<Message> messages = new ArrayList<>();
+
             for (HistoryMessage hm : historyList) {
                 putOutPeer(hm.getSenderPeer());
+
                 messages.add(new Message(
                         PeerUtils.toDomainPeer(peer),
                         PeerUtils.toDomainPeer(hm.getSenderPeer()),
@@ -235,7 +234,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
             }
 
             return messages;
-        }, executor.getExecutor());
+        });
     }
 
     CompletableFuture<List<Dialog>> loadDialogs(Set<Peers.Peer> peers) {
@@ -253,7 +252,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
             res.getUserPeersList().forEach(this::putOutPeer);
 
             return res.getDialogsList();
-        }, executor.getExecutor());
+        });
     }
 
 
@@ -291,9 +290,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
     @SuppressWarnings("unchecked")
     public void onNext(SeqUpdateBox value) {
         try {
-
-            UpdateSeqUpdate upd =
-                    UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
+            UpdateSeqUpdate upd = UpdateSeqUpdate.parseFrom(value.getUpdate().getValue());
 
             int newSeq = upd.getSeq();
             if (newSeq <= this.seq.get()) {
@@ -315,8 +312,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
             Field f = upd.getClass().getDeclaredField("update_");
             f.setAccessible(true);
             updateRaw = f.get(upd);
-
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+        } catch (Exception e) {
             log.error("callListeners", e);
         }
 
@@ -324,7 +320,7 @@ class InternalBotApi implements StreamObserver<SeqUpdateBox> {
             return;
         }
 
-        final GeneratedMessageV3 up = (GeneratedMessageV3) updateRaw;
+        GeneratedMessageV3 up = (GeneratedMessageV3) updateRaw;
 
         for (Map.Entry<Class, List<UpdateListener>> entry : subscribers.entrySet()) {
             if (updateRaw.getClass().isAssignableFrom(entry.getKey())) {

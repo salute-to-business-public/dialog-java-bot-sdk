@@ -15,10 +15,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class TaskManager<R> {
-    private final Logger log = LoggerFactory.getLogger(RetriableTask.class);
+    private final Logger log = LoggerFactory.getLogger(TaskManager.class);
     private final HashSet<Integer> retryCodes = new HashSet<>(Arrays.asList(1, 2, 4, 10, 13, 14, 15));
     private RetriableTask<R> task;
-    private CompletableFuture<R> future = new CompletableFuture<R>();
+    private CompletableFuture<R> future = new CompletableFuture<>();
     private static final ScheduledExecutorService scheduler =
             Executors.newScheduledThreadPool(
                     1,

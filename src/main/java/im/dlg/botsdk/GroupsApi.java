@@ -43,14 +43,14 @@ public class GroupsApi {
         return privateBot.withToken(
                 GroupsGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.createGroup(request.build())
-        ).thenApplyAsync(g -> {
+        ).thenApply(g -> {
             GroupsOuterClass.Group group = g.getGroup();
             return new Group(
                     group.getShortname().getValue(),
                     group.getTitle(),
                     new Peer(group.getId(), Peer.PeerType.GROUP, group.getAccessHash()),
                     GroupType.fromServer(group.getGroupType()));
-        }, privateBot.executor.getExecutor());
+        });
     }
 
     public CompletableFuture<List<Group>> searchGroupByShortname(String query) {
@@ -68,19 +68,13 @@ public class GroupsApi {
         return privateBot.withToken(
                 SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.peerSearch(request))
-                .thenComposeAsync(searchResults -> privateBot.getRefEntities(null, searchResults.getGroupPeersList()), privateBot.executor.getExecutor())
-                .thenApplyAsync(res -> res.getGroupsList().stream().map(g -> {
+                .thenCompose(searchResults -> privateBot.getRefEntities(null, searchResults.getGroupPeersList()))
+                .thenApply(res -> res.getGroupsList().stream().map(g -> {
+                    String shortname = g.getData() != null ? g.getData().getShortname().getValue() : g.getShortname().getValue();
+                    String title = g.getData() != null ? g.getData().getTitle() : g.getTitle();
 
-                            String shortname = g.getData() != null ? g.getData().getShortname().getValue()
-                                    : g.getShortname().getValue();
-                            String title = g.getData() != null ? g.getData().getTitle() : g.getTitle();
-
-                            return new Group(shortname, title,
-                                    new Peer(g.getId(), Peer.PeerType.GROUP, g.getAccessHash()),
-                                    GroupType.fromServer(g.getGroupType()));
-
-
-                        }
-                ).collect(Collectors.toList()), privateBot.executor.getExecutor());
+                    return new Group(shortname, title, new Peer(g.getId(), Peer.PeerType.GROUP, g.getAccessHash()),
+                            GroupType.fromServer(g.getGroupType()));
+                }).collect(Collectors.toList()));
     }
 }

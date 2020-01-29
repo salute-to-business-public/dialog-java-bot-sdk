@@ -6,7 +6,7 @@ import dialog.MessagingOuterClass.*;
 import im.dlg.botsdk.domain.InteractiveEvent;
 import im.dlg.botsdk.domain.Peer;
 import im.dlg.botsdk.domain.interactive.*;
-import im.dlg.botsdk.light.InteractiveEventListener;
+import im.dlg.botsdk.listeners.InteractiveEventListener;
 import im.dlg.botsdk.utils.MsgUtils;
 import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
@@ -20,17 +20,15 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Api class for all the interactive requests, subscribtions
+ * Api class for all the interactive requests, subscriptions
  */
 public class InteractiveApi {
 
     private final Logger log = LoggerFactory.getLogger(InteractiveApi.class);
-
-    private InternalBotApi privateBot;
+    private final InternalBotApi privateBot;
     private InteractiveEventListener listener = null;
 
     InteractiveApi(InternalBotApi privateBot) {
-
         this.privateBot = privateBot;
 
         privateBot.subscribeOn(UpdateInteractiveMediaEvent.class, evt -> {
@@ -100,7 +98,7 @@ public class InteractiveApi {
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.sendMessage(request.build())
-        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMessageId()), privateBot.executor.getExecutor());
+        ).thenApply(resp -> UUIDUtils.convert(resp.getMessageId()));
     }
 
     /**
@@ -126,7 +124,7 @@ public class InteractiveApi {
         return privateBot.withToken(
                 MessagingGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.updateMessage(request.build())
-        ).thenApplyAsync(resp -> UUIDUtils.convert(resp.getMid()), privateBot.executor.getExecutor());
+        ).thenApply(resp -> UUIDUtils.convert(resp.getMid()));
     }
 
     private MessageContent buildMessageContent(InteractiveGroup group) {
@@ -134,9 +132,7 @@ public class InteractiveApi {
     }
 
     private MessageContent buildMessageContent(InteractiveGroup group, String text) {
-
-        InteractiveMediaGroup.Builder apiMediaGroup =
-                InteractiveMediaGroup.newBuilder();
+        InteractiveMediaGroup.Builder apiMediaGroup = InteractiveMediaGroup.newBuilder();
 
         if (group.getTitle() != null && !group.getTitle().isEmpty()) {
             apiMediaGroup.setTitle(StringValue.of(group.getTitle()));
@@ -147,7 +143,6 @@ public class InteractiveApi {
         }
 
         for (InteractiveAction action : group.getActions()) {
-
             InteractiveMedia.Builder apiMedia = InteractiveMedia.newBuilder()
                     .setId(action.getId())
                     .setStyle(buildStyle(action.getStyle()));
@@ -180,8 +175,8 @@ public class InteractiveApi {
     }
 
     private InteractiveMediaWidget buildButton(InteractiveButton button) {
-        InteractiveMediaButton.Builder btn =
-                InteractiveMediaButton.newBuilder().setValue(button.getValue());
+        InteractiveMediaButton.Builder btn = InteractiveMediaButton.newBuilder()
+                .setValue(button.getValue());
 
         if (button.getLabel() != null && !button.getLabel().isEmpty()) {
             btn.setLabel(StringValue.of(button.getLabel()));

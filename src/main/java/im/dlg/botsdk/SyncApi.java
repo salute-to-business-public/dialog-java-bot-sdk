@@ -24,7 +24,7 @@ public class SyncApi {
      * @param seq
      * @return the future when all updates downloaded
      */
-    public synchronized CompletableFuture<Integer> restoreFromSeq(int seq) {
-        return this.privateBot.getDifference(seq);
+    public CompletableFuture<Integer> restoreFromSeq(int seq) {
+        return privateBot.getDifference(seq);
     }
 }

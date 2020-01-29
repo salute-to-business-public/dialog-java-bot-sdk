@@ -5,11 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RetryOptions {
-    private final Logger log = LoggerFactory.getLogger(RetriableTask.class);
-    private int maxRetries = 5;
-    private int minDelay = 1;
-    private int maxDelay = 50;
-    private double delayFactor = Math.exp(1);
+
+    private final int maxRetries;
+    private final int minDelay;
+    private final int maxDelay;
+    private final double delayFactor;
 
     private RetryOptions(int maxRetries, int minDelay, int maxDelay, double delayFactor) {
         this.maxRetries = maxRetries;
@@ -18,13 +18,21 @@ public class RetryOptions {
         this.delayFactor = delayFactor;
     }
 
-    public int getMaxRetries() {return this.maxRetries;}
+    public int getMaxRetries() {
+        return maxRetries;
+    }
 
-    public int getMinDelay() {return this.minDelay;}
+    public int getMinDelay() {
+        return minDelay;
+    }
 
-    public int getMaxDelay() {return this.maxDelay;}
+    public int getMaxDelay() {
+        return maxDelay;
+    }
 
-    public double getDelayFactor() {return this.delayFactor;}
+    public double getDelayFactor() {
+        return delayFactor;
+    }
 
     public static final class Builder {
         int maxRetries = 5;
@@ -32,10 +40,10 @@ public class RetryOptions {
         int maxDelay = 50;
         double delayFactor = Math.exp(1);
 
-        public Builder() {
+        private Builder() {
         }
 
-        public static Builder aRetryOptions() {
+        public static Builder newBuilder() {
             return new Builder();
         }
 

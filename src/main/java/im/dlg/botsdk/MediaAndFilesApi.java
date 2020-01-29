@@ -111,21 +111,12 @@ public class MediaAndFilesApi {
             entity = new FileEntity(file, ContentType.create(mimeType));
         }
         request.setEntity(entity);
-        log.debug("Executing request ->" + request.getRequestLine());
-        CloseableHttpResponse response = null;
-        try {
-            response = httpclient.execute(request);
-            log.debug("Response ->" + response.getStatusLine());
+        log.debug("Executing request -> {}", request.getRequestLine());
+
+        try (CloseableHttpResponse response = httpclient.execute(request)) {
+            log.debug("Response -> {}", response.getStatusLine());
         } catch (IOException e) {
             log.error("Failed to send file", e);
-        } finally {
-            try {
-                if (response != null) {
-                    response.close();
-                }
-            } catch (IOException e) {
-                log.error("Failed to close response", e);
-            }
         }
 
     }

@@ -30,7 +30,7 @@ public class UsersApi {
      * @return future with the user data
      */
     public CompletableFuture<Optional<User>> get(Peer outPeer) {
-        return get(Sets.newHashSet(outPeer)).thenApplyAsync(users ->
+        return get(Sets.newHashSet(outPeer)).thenApply(users ->
                 users.stream().filter(u -> u.getPeer().getId() == outPeer.getId()).findFirst());
     }
 
@@ -49,7 +49,7 @@ public class UsersApi {
             peerMap.put(peer.getId(), peer);
         }
 
-        return privateBot.getRefEntities(userOutPeers, null).thenComposeAsync(res -> {
+        return privateBot.getRefEntities(userOutPeers, null).thenCompose(res -> {
             Map<Integer, UsersOuterClass.User> users = new HashMap<>();
             res.getUsersList().forEach(u -> users.put(u.getId(), u));
 
@@ -59,7 +59,7 @@ public class UsersApi {
                             .addAllUserPeers(userOutPeers)
                             .build()
                     )
-            ).thenApplyAsync(r -> r.getFullUsersList().stream().map(fu -> {
+            ).thenApply(r -> r.getFullUsersList().stream().map(fu -> {
                 UsersOuterClass.User u = users.get(fu.getId());
                 String preferredLanguages = fu.getPreferredLanguagesCount() > 0
                         ? fu.getPreferredLanguages(0) : null;
@@ -69,8 +69,8 @@ public class UsersApi {
                         preferredLanguages, fu.getTimeZone().getValue(),
                         fu.getCustomProfile()
                 );
-            }).collect(Collectors.toList()), privateBot.executor.getExecutor());
-        }, privateBot.executor.getExecutor());
+            }).collect(Collectors.toList()));
+        });
     }
 
     /**
@@ -110,10 +110,10 @@ public class UsersApi {
         return privateBot.withToken(
                 SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.peerSearch(request))
-                .thenComposeAsync(t -> get(t.getUserPeersList().stream()
+                .thenCompose(t -> get(t.getUserPeersList().stream()
                         .map(peer -> PeerUtils.toDomainPeer(PeerUtils.toOutPeer(peer)))
                         .collect(Collectors.toList())))
-                .thenApplyAsync(users -> users.stream().filter(u -> u.getNick().contains(query))
+                .thenApply(users -> users.stream().filter(u -> u.getNick().contains(query))
                         .collect(Collectors.toList()));
     }
 
@@ -132,7 +132,7 @@ public class UsersApi {
         return privateBot.withToken(
                 ContactsGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.searchContacts(request)
-        ).thenComposeAsync(t -> get(t.getUserPeersList().stream()
+        ).thenCompose(t -> get(t.getUserPeersList().stream()
                 .map(peer -> PeerUtils.toDomainPeer(PeerUtils.toOutPeer(peer)))
                 .collect(Collectors.toList())));
     }
@@ -182,7 +182,7 @@ public class UsersApi {
         return privateBot.withToken(
                 UsersGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.loadFullUsers(request)
-        ).thenApplyAsync(res -> {
+        ).thenApply(res -> {
             if (res.getFullUsersCount() > 0)
                 return res.getFullUsers(0);
             return null;

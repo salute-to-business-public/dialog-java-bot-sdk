@@ -24,13 +24,12 @@ public class PeersApi {
         return privateBot.withToken(
                 SearchGrpc.newFutureStub(privateBot.channel.getChannel()),
                 stub -> stub.resolvePeer(request)
-        ).thenApplyAsync(res -> {
+        ).thenApply(res -> {
                     Peers.OutPeer peer = res.getPeer();
                     return new Peer(
                             peer.getId(),
                             PeerUtils.toDomainPeerType(peer.getType()),
                             peer.getAccessHash());
-                }, privateBot.executor.getExecutor()
-        );
+                });
     }
 }
