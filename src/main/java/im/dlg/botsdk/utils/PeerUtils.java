@@ -1,7 +1,7 @@
 package im.dlg.botsdk.utils;
 
 import dialog.Peers;
-import im.dlg.botsdk.domain.Peer;
+import im.dlg.botsdk.model.Peer;
 
 public class PeerUtils {
     public static Peers.Peer toPeer(Peers.OutPeer op) {

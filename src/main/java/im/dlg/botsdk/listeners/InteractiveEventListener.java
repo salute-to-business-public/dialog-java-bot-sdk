@@ -1,6 +1,6 @@
 package im.dlg.botsdk.listeners;
 
-import im.dlg.botsdk.domain.InteractiveEvent;
+import im.dlg.botsdk.model.InteractiveEvent;
 
 @FunctionalInterface
 public interface InteractiveEventListener {

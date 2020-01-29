@@ -9,7 +9,7 @@ apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
 ext {
-    grpcVersion = '1.17.1'
+    grpcVersion = '1.26.0'
     gitUrl = "https://github.com/dialogs/java-bot-sdk"
     issueTrackerUrl = "https://github.com/dialogs/java-bot-sdk/issues"
     libraryDescription = "Bot SDK for java developers"

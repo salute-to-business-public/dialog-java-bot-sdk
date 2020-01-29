@@ -1,6 +1,6 @@
 package im.dlg.botsdk.listeners;
 
-import im.dlg.botsdk.domain.Message;
+import im.dlg.botsdk.model.Message;
 
 @FunctionalInterface
 public interface MessageListener {
