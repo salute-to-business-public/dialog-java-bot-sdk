@@ -162,7 +162,7 @@ public class UsersApi {
      * @param nick - user's nick
      * @return future with the user FullInfo
      */
-    public CompletableFuture<FullUser> getUserFullProfileByNick(String nick) {
+    public CompletableFuture<Optional<FullUser>> getUserFullProfileByNick(String nick) {
         return peersApi.resolvePeer(nick)
                 .thenCompose(this::getUserFullProfileByPeer);
     }
@@ -173,14 +173,14 @@ public class UsersApi {
      * @param peer - user's peer
      * @return future with the user FullInfo
      */
-    public CompletableFuture<FullUser> getUserFullProfileByPeer(Peer peer) {
+    public CompletableFuture<Optional<FullUser>> getUserFullProfileByPeer(Peer peer) {
         Peers.UserOutPeer outPeer = Peers.UserOutPeer.newBuilder()
                 .setAccessHash(peer.getAccessHash())
                 .setUid(peer.getId())
                 .build();
 
         if (outPeer.getAccessHash() == 0 && outPeer.getUid() == 0) {
-            return null;
+            return CompletableFuture.completedFuture(Optional.empty());
         }
 
         RequestLoadFullUsers request = RequestLoadFullUsers.newBuilder()
@@ -192,10 +192,10 @@ public class UsersApi {
                 stub -> stub.loadFullUsers(request))
                 .thenApply(res -> {
                     if (res.getFullUsersCount() > 0) {
-                        return res.getFullUsers(0);
+                        return Optional.of(res.getFullUsers(0));
                     }
 
-                    return null;
+                    return Optional.empty();
         });
     }
 
@@ -205,9 +205,9 @@ public class UsersApi {
      * @param nick - user's nick
      * @return CustomProfile
      */
-    public String getUserCustomProfileByNick(String nick) throws ExecutionException, InterruptedException {
-        return getUserFullProfileByNick(nick) != null ?
-                getUserFullProfileByNick(nick).get().getCustomProfile() : null;
+    public CompletableFuture<Optional<String>> getUserCustomProfileByNick(String nick) {
+        return getUserFullProfileByNick(nick)
+                .thenApply(userOpt -> userOpt.map(FullUser::getCustomProfile));
     }
 
     /**
@@ -216,11 +216,9 @@ public class UsersApi {
      * @param peer - user's peer
      * @return CustomProfile
      */
-    public String getUserCustomProfileByPeer(Peer peer) throws ExecutionException, InterruptedException {
-        getUserFullProfileByPeer(peer);
-
-        return getUserFullProfileByPeer(peer) != null ?
-                getUserFullProfileByPeer(peer).get().getCustomProfile() : null;
+    public CompletableFuture<Optional<String>> getUserCustomProfileByPeer(Peer peer) {
+        return getUserFullProfileByPeer(peer)
+                .thenApply(userOpt -> userOpt.map(FullUser::getCustomProfile));
     }
 
 }
