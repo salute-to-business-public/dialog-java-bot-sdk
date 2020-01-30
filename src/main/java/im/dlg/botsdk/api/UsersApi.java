@@ -62,7 +62,7 @@ public class UsersApi {
             Map<Integer, UsersOuterClass.User> users = new HashMap<>();
             res.getUsersList().forEach(u -> users.put(u.getId(), u));
 
-            return internalBot.sendRequest(
+            return internalBot.withToken(
                     UsersGrpc.newFutureStub(channel),
                     stub -> stub.loadFullUsers(RequestLoadFullUsers.newBuilder()
                             .addAllUserPeers(userOutPeers)
@@ -114,7 +114,7 @@ public class UsersApi {
                 .addAllOptimizations(Constants.OPTIMISATIONS)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 SearchGrpc.newFutureStub(channel),
                 stub -> stub.peerSearch(request))
                 .thenCompose(t -> get(t.getUserPeersList().stream()
@@ -136,7 +136,7 @@ public class UsersApi {
                 .addAllOptimizations(Constants.OPTIMISATIONS)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 ContactsGrpc.newFutureStub(channel),
                 stub -> stub.searchContacts(request)
         ).thenCompose(t -> get(t.getUserPeersList().stream()
@@ -187,7 +187,7 @@ public class UsersApi {
                 .addUserPeers(outPeer)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 UsersGrpc.newFutureStub(channel),
                 stub -> stub.loadFullUsers(request))
                 .thenApply(res -> {

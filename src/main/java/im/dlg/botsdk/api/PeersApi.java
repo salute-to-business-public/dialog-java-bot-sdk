@@ -25,7 +25,7 @@ public class PeersApi {
                 .setShortname(shortname)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 SearchGrpc.newFutureStub(channel),
                 stub -> stub.resolvePeer(request)
         ).thenApply(res -> {

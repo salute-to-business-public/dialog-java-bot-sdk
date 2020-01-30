@@ -26,7 +26,7 @@ public class BotProfileApi {
                 .setName(name)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 ProfileGrpc.newFutureStub(channel),
                 stub -> stub.editName(request))
                 .thenApply(t -> null);
@@ -37,7 +37,7 @@ public class BotProfileApi {
                 .setAbout(StringValue.of(about))
                 .build();
 
-        return internalBot.sendRequest(ProfileGrpc.newFutureStub(channel),
+        return internalBot.withToken(ProfileGrpc.newFutureStub(channel),
                 stub -> stub.editAbout(request))
                 .thenApply(t -> null);
     }

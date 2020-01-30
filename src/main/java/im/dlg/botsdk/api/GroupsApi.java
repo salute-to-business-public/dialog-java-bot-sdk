@@ -48,7 +48,7 @@ public class GroupsApi {
                 .setUsername(StringValue.of(username))
                 .setRid(LocalDateTime.now().getSecond());
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 GroupsGrpc.newFutureStub(channel),
                 stub -> stub.createGroup(request.build())
         ).thenApply(g -> {
@@ -74,7 +74,7 @@ public class GroupsApi {
                                 .build()))
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 SearchGrpc.newFutureStub(channel),
                 stub -> stub.peerSearch(request))
                 .thenCompose(searchResults -> internalBot.getRefEntities(null, new HashSet<>(searchResults.getGroupPeersList())))

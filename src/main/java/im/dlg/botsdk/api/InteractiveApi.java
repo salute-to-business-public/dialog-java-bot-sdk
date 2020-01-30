@@ -101,7 +101,7 @@ public class InteractiveApi {
             request.setMessage(buildMessageContent(group));
         }
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel),
                 stub -> stub.sendMessage(request.build()))
                 .thenApply(resp -> UUIDUtils.convert(resp.getMessageId()));
@@ -127,7 +127,7 @@ public class InteractiveApi {
             request.setUpdatedMessage(buildMessageContent(group));
         }
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel),
                 stub -> stub.updateMessage(request.build()))
                 .thenApply(resp -> UUIDUtils.convert(resp.getMid()));

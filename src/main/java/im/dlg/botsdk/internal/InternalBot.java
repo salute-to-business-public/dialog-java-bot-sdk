@@ -14,6 +14,7 @@ import im.dlg.botsdk.BotConfig;
 import im.dlg.botsdk.model.Message;
 import im.dlg.botsdk.model.content.Content;
 import im.dlg.botsdk.listeners.UpdateListener;
+import im.dlg.botsdk.retry.TaskManager;
 import im.dlg.botsdk.utils.*;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
@@ -40,15 +41,16 @@ public class InternalBot {
 
     private final Logger log = LoggerFactory.getLogger(InternalBot.class);
 
-    private final ManagedChannel channel;
-    private volatile Metadata metadata;
-
-    private final BotConfig config;
     private final Map<String, OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private final Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
     private final AtomicInteger currentSequence = new AtomicInteger();
     private final InternalBotStream stream = new InternalBotStream(this, currentSequence);
+
+    private final ManagedChannel channel;
+    private final BotConfig config;
     private final boolean anonymousAuth;
+
+    private volatile Metadata metadata;
 
     public InternalBot(ManagedChannel channel, BotConfig config, boolean anonymousAuth) {
         this.channel = channel;
@@ -83,7 +85,7 @@ public class InternalBot {
 
         }).thenCompose(res -> meta).thenCompose(m -> {
             if (anonymousAuth) {
-                return FutureConverter.toCompletableFuture(sendRequest(m,
+                return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel),
                         stub -> stub.startAnonymousAuth(
                                 AuthenticationOuterClass.RequestStartAnonymousAuth.newBuilder()
@@ -96,7 +98,7 @@ public class InternalBot {
                         )
                 )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
             } else if (config.getToken() != null) {
-                return FutureConverter.toCompletableFuture(sendRequest(m,
+                return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel),
                         stub -> stub.startTokenAuth(
                                 AuthenticationOuterClass.RequestStartTokenAuth.newBuilder()
@@ -113,7 +115,7 @@ public class InternalBot {
                 return null;
             }
         }).thenApply(p -> {
-            sendRequest(p.getRight(),
+            withToken(p.getRight(),
                     SequenceAndUpdatesGrpc.newStub(channel),
                     stub -> {
                         stub.seqUpdates(Empty.newBuilder().build(), stream);
@@ -127,18 +129,19 @@ public class InternalBot {
     }
 
     void reconnect() {
-        sendRequest(metadata, SequenceAndUpdatesGrpc.newStub(channel), stub -> {
+        withToken(metadata, SequenceAndUpdatesGrpc.newStub(channel), stub -> {
             stub.seqUpdates(Empty.newBuilder().build(), stream);
             return new Object();
         });
     }
 
-    public <T extends AbstractStub<T>, R> CompletableFuture<R> sendRequest(T stub, Function<T, ListenableFuture<R>> f) {
+    public <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
         T newStub = MetadataUtils.attachHeaders(stub, metadata);
-        return FutureConverter.toCompletableFuture(f.apply(newStub));
+        TaskManager<R> task = new TaskManager<>(FutureConverter.toCompletableFuture(f.apply(newStub)), config.getRetryOptions());
+        return task.scheduleTask(0);
     }
 
-    public <T extends AbstractStub<T>, R> R sendRequest(Metadata meta, T stub, Function<T, R> f) {
+    public <T extends AbstractStub<T>, R> R withToken(Metadata meta, T stub, Function<T, R> f) {
         T newStub = MetadataUtils.attachHeaders(stub, meta);
         return f.apply(newStub);
     }
@@ -185,7 +188,7 @@ public class InternalBot {
             requestBuilder.addAllGroups(groupOutPeers);
         }
 
-        return sendRequest(SequenceAndUpdatesGrpc.newFutureStub(channel),
+        return withToken(SequenceAndUpdatesGrpc.newFutureStub(channel),
                 stub -> stub.getReferencedEntitites(requestBuilder.build()));
     }
 
@@ -202,7 +205,7 @@ public class InternalBot {
     }
 
     public CompletableFuture<List<Message>> load(OutPeer peer, long from, Integer limit) {
-        return sendRequest(
+        return withToken(
                 MessagingGrpc.newFutureStub(channel),
                 stub -> stub.loadHistory(MessagingOuterClass.RequestLoadHistory.newBuilder()
                         .setDate(from)
@@ -241,7 +244,7 @@ public class InternalBot {
                 .addAllOptimizations(Constants.OPTIMISATIONS)
                 .build();
 
-        return sendRequest(
+        return withToken(
                 MessagingGrpc.newFutureStub(channel),
                 stub -> stub.loadDialogs(request)
         ).thenApply(res -> {
@@ -264,7 +267,7 @@ public class InternalBot {
     public CompletableFuture<Integer> getDifference(int seq) {
         RequestGetDifference request = RequestGetDifference.newBuilder().setSeq(seq).build();
 
-        return sendRequest(SequenceAndUpdatesGrpc.newFutureStub(channel)
+        return withToken(SequenceAndUpdatesGrpc.newFutureStub(channel)
                 .withDeadlineAfter(2, TimeUnit.MINUTES), stub -> stub.getDifference(request))
                 .thenCompose(res -> {
 

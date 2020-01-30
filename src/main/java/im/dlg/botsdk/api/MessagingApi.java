@@ -127,7 +127,7 @@ public class MessagingApi {
             request.setForward(forward);
         }
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.sendMessage(request.build()))
                 .thenApply(resp -> UUIDUtils.convert(resp.getMessageId()));
@@ -154,7 +154,7 @@ public class MessagingApi {
                 .setUpdatedMessage(messageContent)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.updateMessage(request))
                 .thenApply(res -> UUIDUtils.convert(res.getMid()));
@@ -180,7 +180,7 @@ public class MessagingApi {
                 .addAllMids(mids)
                 .build();
 
-        internalBot.sendRequest(
+        internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.deleteMessageObsolete(request));
     }
@@ -342,7 +342,7 @@ public class MessagingApi {
                 .setUpdatedMessage(messageContent)
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel)
                         .withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.updateMessage(request)
@@ -476,7 +476,7 @@ public class MessagingApi {
             request.setLoadMode(ListLoadMode.LISTLOADMODE_BOTH);
         }
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.loadHistory(request.build()))
                 .thenApply(resp -> resp.getHistoryList().stream()
@@ -497,7 +497,7 @@ public class MessagingApi {
                 .setDate(date.toEpochMilli())
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.messageRead(request))
                 .thenApply(resp -> null);
@@ -528,7 +528,7 @@ public class MessagingApi {
                 .setPeer(PeerUtils.toServerOutPeer(peer))
                 .build();
 
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                 stub -> stub.deleteChat(request))
                 .thenApply(resp -> null);

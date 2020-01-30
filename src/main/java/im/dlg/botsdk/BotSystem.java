@@ -15,8 +15,8 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.io.File;
 import java.security.Security;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.TimeUnit.*;
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class BotSystem {
@@ -60,9 +60,8 @@ public class BotSystem {
 
             NettyChannelBuilder nettyChannelBuilder = (NettyChannelBuilder) ManagedChannelBuilder
                     .forAddress(config.getHost(), config.getPort())
-                    .idleTimeout(15, TimeUnit.SECONDS)
-                    .keepAliveTime(30, TimeUnit.SECONDS)
-                    .enableRetry();
+                    .idleTimeout(15, SECONDS)
+                    .keepAliveTime(30, SECONDS);
 
             if (config.getCertPath() != null && config.getCertPassword() != null) {
                 File certFile = new File(config.getCertPath());

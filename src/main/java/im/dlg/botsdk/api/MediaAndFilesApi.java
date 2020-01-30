@@ -43,14 +43,14 @@ public class MediaAndFilesApi {
                 .setExpectedSize(fileSize);
 
         return internalBot
-                .sendRequest(MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(1,
+                .withToken(MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(1,
                         TimeUnit.MINUTES), stub -> stub.getFileUploadUrl(requestGetUrl.build())
                 ).thenCompose(responseGetFileUploadUrl -> {
                     RequestGetFileUploadPartUrl.Builder uploadPart =
                             RequestGetFileUploadPartUrl.newBuilder().setPartNumber(0).
                                     setPartSize(fileSize).setUploadKey(responseGetFileUploadUrl.getUploadKey());
                     return internalBot
-                            .sendRequest(MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(3,
+                            .withToken(MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(3,
                                     TimeUnit.MINUTES), stub -> stub.getFileUploadPartUrl(uploadPart.build()))
                             .thenApply(res -> new Pair<>(res.getUrl(), responseGetFileUploadUrl.getUploadKey()));
                 }).thenCompose(respPair ->
@@ -58,7 +58,7 @@ public class MediaAndFilesApi {
                                 .setBody(file).execute().toCompletableFuture()
                                 .thenApply(val -> respPair.getValue1())
                 ).thenCompose(uploadKey -> internalBot
-                        .sendRequest(MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(3,
+                        .withToken(MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(3,
                                 TimeUnit.MINUTES), stub ->
                                 stub.commitFileUpload(RequestCommitFileUpload.newBuilder()
                                         .setFileName(fileName)
@@ -73,7 +73,7 @@ public class MediaAndFilesApi {
      * @return - A CompletableFuture for a String containing download url
      */
     public CompletableFuture<String> getFileUrl(FileLocation fileLoc) {
-        return internalBot.sendRequest(
+        return internalBot.withToken(
                         MediaAndFilesGrpc.newFutureStub(channel).withDeadlineAfter(2, TimeUnit.MINUTES),
                         stub -> stub.getFileUrls(RequestGetFileUrls.newBuilder().addFiles(fileLoc).build()))
                 .thenApply(resp -> resp.getFileUrlsList().get(0).getUrl());
