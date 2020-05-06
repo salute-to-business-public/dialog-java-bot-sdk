@@ -1,11 +1,11 @@
 package im.dlg.botsdk.status;
 
 import dialog.ObsoleteOuterClass.ObsoleteWeakUpdateCommand;
-import im.dlg.botsdk.domain.Group;
-import im.dlg.botsdk.domain.Peer;
-import im.dlg.botsdk.domain.User;
-import im.dlg.botsdk.light.GroupOnlineStatusListener;
-import im.dlg.botsdk.light.UserOnlineStatusListener;
+import im.dlg.botsdk.listeners.GroupOnlineStatusListener;
+import im.dlg.botsdk.listeners.UserOnlineStatusListener;
+import im.dlg.botsdk.model.Group;
+import im.dlg.botsdk.model.Peer;
+import im.dlg.botsdk.model.User;
 import im.dlg.botsdk.utils.PeerUtils;
 import io.grpc.stub.StreamObserver;
 
