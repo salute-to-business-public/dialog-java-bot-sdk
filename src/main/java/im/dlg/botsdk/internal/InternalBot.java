@@ -32,6 +32,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import static dialog.AuthenticationOuterClass.*;
 import static dialog.Peers.*;
 import static dialog.RegistrationOuterClass.*;
 import static dialog.SequenceAndUpdatesOuterClass.*;
@@ -60,7 +61,7 @@ public class InternalBot {
         this.anonymousAuth = anonymousAuth;
     }
 
-    public CompletableFuture<Void> start() {
+    public CompletableFuture<Object> start() {
         CompletableFuture<Metadata> meta = new CompletableFuture<>();
 
         RequestRegisterDevice request = RequestRegisterDevice.newBuilder()
@@ -90,7 +91,7 @@ public class InternalBot {
                 return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel),
                         stub -> stub.startAnonymousAuth(
-                                AuthenticationOuterClass.RequestStartAnonymousAuth.newBuilder()
+                                RequestStartAnonymousAuth.newBuilder()
                                         .setApiKey("BotSdk")
                                         .setAppId(APP_ID)
                                         .setDeviceTitle(config.getBotName())
@@ -99,11 +100,31 @@ public class InternalBot {
                                         .build()
                         )
                 )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
+            } else if (config.getPassword() != null) {
+                return FutureConverter.toCompletableFuture(withToken(m, AuthenticationGrpc.newFutureStub(channel),
+                        stub -> stub.startUsernameAuth(
+                                RequestStartUsernameAuth.newBuilder()
+                                        .setUsername(config.getBotName())
+                                        .setApiKey("BotSdk")
+                                        .setAppId(APP_ID)
+                                        .setDeviceTitle(config.getBotName())
+                                        .addPreferredLanguages("RU")
+                                        .setTimeZone(StringValue.newBuilder().setValue("+3").build())
+                                        .build()
+                        )))
+                        .thenCompose(res ->  FutureConverter.toCompletableFuture(withToken(m, AuthenticationGrpc.newFutureStub(channel),
+                                stub -> stub.validatePassword(
+                                        RequestValidatePassword.newBuilder()
+                                                .setTransactionHash(res.getTransactionHash())
+                                                .setPassword(config.getPassword())
+                                                .build()
+                                ))))
+                        .thenApply(res -> new ImmutablePair<>(res.getUser(), m));
             } else if (config.getToken() != null) {
                 return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel),
                         stub -> stub.startTokenAuth(
-                                AuthenticationOuterClass.RequestStartTokenAuth.newBuilder()
+                                RequestStartTokenAuth.newBuilder()
                                         .setApiKey("BotSdk")
                                         .setAppId(APP_ID)
                                         .setDeviceTitle(config.getBotName())

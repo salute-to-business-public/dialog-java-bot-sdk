@@ -10,13 +10,19 @@ import static im.dlg.botsdk.retry.RetryOptions.*;
 public class BotConfig {
 
     private final String botName;
+    private final String password;
     private final String token;
     private final RetryOptions retryOptions;
 
-    private BotConfig(String botName, String token, RetryOptions retryOptions) {
+    private BotConfig(String botName, String password, String token, RetryOptions retryOptions) {
         this.botName = botName;
+        this.password = password;
         this.token = token;
         this.retryOptions = retryOptions;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     /**
@@ -41,6 +47,7 @@ public class BotConfig {
 
         private String botName = "JavaBot";
         private String token;
+        private String password;
         private RetryOptions retryOptions = DEFAULT_RETRY_OPTIONS;
 
         private Builder() {
@@ -55,6 +62,11 @@ public class BotConfig {
             return this;
         }
 
+        public Builder withPassword(String password) {
+            this.password = password;
+            return this;
+        }
+
         public Builder withToken(String token) {
             this.token = token;
             return this;
@@ -66,7 +78,7 @@ public class BotConfig {
         }
 
         public BotConfig build() {
-            return new BotConfig(botName, token, retryOptions);
+            return new BotConfig(botName, password, token, retryOptions);
         }
 
     }

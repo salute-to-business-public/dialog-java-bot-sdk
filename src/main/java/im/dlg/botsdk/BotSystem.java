@@ -87,9 +87,17 @@ public class BotSystem {
                 .thenApply(v -> new Bot(channel, internalBot, asyncHttpClient));
     }
 
-    public CompletableFuture<Bot> startBot(String token) {
+    public CompletableFuture<Bot> startBotWithToken(String token) {
         BotConfig botConfig = BotConfig.Builder.newBuilder()
                 .withToken(token)
+                .build();
+
+        return startBot(botConfig);
+    }
+
+    public CompletableFuture<Bot> startBotWithPassword(String password) {
+        BotConfig botConfig = BotConfig.Builder.newBuilder()
+                .withPassword(password)
                 .build();
 
         return startBot(botConfig);
