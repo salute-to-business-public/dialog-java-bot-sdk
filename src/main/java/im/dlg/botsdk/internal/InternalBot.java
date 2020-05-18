@@ -61,7 +61,7 @@ public class InternalBot {
         this.anonymousAuth = anonymousAuth;
     }
 
-    public CompletableFuture<Object> start() {
+    public CompletableFuture<Void> start() {
         CompletableFuture<Metadata> meta = new CompletableFuture<>();
 
         RequestRegisterDevice request = RequestRegisterDevice.newBuilder()
