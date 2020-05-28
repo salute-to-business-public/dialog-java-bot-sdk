@@ -89,7 +89,7 @@ public class BotSystem {
 
     public CompletableFuture<Bot> startBotWithToken(String token) {
         BotConfig botConfig = BotConfig.Builder.newBuilder()
-                .withToken(token)
+                .withCredentials(new BotCredentials(BotCredentials.Method.TOKEN, token))
                 .build();
 
         return startBot(botConfig);
@@ -97,7 +97,7 @@ public class BotSystem {
 
     public CompletableFuture<Bot> startBotWithPassword(String password) {
         BotConfig botConfig = BotConfig.Builder.newBuilder()
-                .withPassword(password)
+                .withCredentials(new BotCredentials(BotCredentials.Method.PASSWORD, password))
                 .build();
 
         return startBot(botConfig);
