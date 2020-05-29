@@ -11,6 +11,7 @@ import dialog.MessagingOuterClass.HistoryMessage;
 import dialog.MessagingOuterClass.ListLoadMode;
 import dialog.MessagingOuterClass.RequestLoadDialogs;
 import im.dlg.botsdk.BotConfig;
+import im.dlg.botsdk.BotCredentials;
 import im.dlg.botsdk.model.Message;
 import im.dlg.botsdk.model.content.Content;
 import im.dlg.botsdk.listeners.UpdateListener;
@@ -32,6 +33,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import static dialog.AuthenticationOuterClass.*;
 import static dialog.Peers.*;
 import static dialog.RegistrationOuterClass.*;
 import static dialog.SequenceAndUpdatesOuterClass.*;
@@ -65,8 +67,8 @@ public class InternalBot {
 
         RequestRegisterDevice request = RequestRegisterDevice.newBuilder()
                 .setAppId(APP_ID)
-                .setAppTitle(config.getBotName())
-                .setDeviceTitle(config.getBotName())
+                .setAppTitle(config.getName())
+                .setDeviceTitle(config.getName())
                 .build();
 
         return FutureConverter.toCompletableFuture(
@@ -90,29 +92,58 @@ public class InternalBot {
                 return FutureConverter.toCompletableFuture(withToken(m,
                         AuthenticationGrpc.newFutureStub(channel),
                         stub -> stub.startAnonymousAuth(
-                                AuthenticationOuterClass.RequestStartAnonymousAuth.newBuilder()
+                                RequestStartAnonymousAuth.newBuilder()
                                         .setApiKey("BotSdk")
                                         .setAppId(APP_ID)
-                                        .setDeviceTitle(config.getBotName())
+                                        .setDeviceTitle(config.getName())
                                         .addPreferredLanguages("RU")
                                         .setTimeZone(StringValue.newBuilder().setValue("+3").build())
                                         .build()
                         )
                 )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
-            } else if (config.getToken() != null) {
-                return FutureConverter.toCompletableFuture(withToken(m,
-                        AuthenticationGrpc.newFutureStub(channel),
-                        stub -> stub.startTokenAuth(
-                                AuthenticationOuterClass.RequestStartTokenAuth.newBuilder()
-                                        .setApiKey("BotSdk")
-                                        .setAppId(APP_ID)
-                                        .setDeviceTitle(config.getBotName())
-                                        .addPreferredLanguages("RU")
-                                        .setTimeZone(StringValue.newBuilder().setValue("+3").build())
-                                        .setToken(config.getToken())
-                                        .build()
-                        )
-                )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
+            } else if (config.getCredentials() != null) {
+                BotCredentials credentials = config.getCredentials();
+
+                switch (credentials.getMethod()) {
+                    case TOKEN:
+                        return FutureConverter.toCompletableFuture(withToken(m,
+                                AuthenticationGrpc.newFutureStub(channel),
+                                stub -> stub.startTokenAuth(
+                                        RequestStartTokenAuth.newBuilder()
+                                                .setApiKey("BotSdk")
+                                                .setAppId(APP_ID)
+                                                .setDeviceTitle(config.getName())
+                                                .addPreferredLanguages("RU")
+                                                .setTimeZone(StringValue.newBuilder().setValue("+3").build())
+                                                .setToken(credentials.getValue())
+                                                .build()
+                                )
+                        )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
+                    case PASSWORD:
+                        return FutureConverter.toCompletableFuture(withToken(m,
+                                AuthenticationGrpc.newFutureStub(channel),
+                                stub -> stub.startUsernameAuth(
+                                        RequestStartUsernameAuth.newBuilder()
+                                                .setUsername(config.getName())
+                                                .setApiKey("BotSdk")
+                                                .setAppId(APP_ID)
+                                                .setDeviceTitle(config.getName())
+                                                .addPreferredLanguages("RU")
+                                                .setTimeZone(StringValue.newBuilder().setValue("+3").build())
+                                                .build()
+                                )))
+                                .thenCompose(res -> FutureConverter.toCompletableFuture(withToken(m,
+                                        AuthenticationGrpc.newFutureStub(channel),
+                                        stub -> stub.validatePassword(
+                                                RequestValidatePassword.newBuilder()
+                                                        .setTransactionHash(res.getTransactionHash())
+                                                        .setPassword(credentials.getValue())
+                                                        .build()
+                                        ))))
+                                .thenApply(res -> new ImmutablePair<>(res.getUser(), m));
+                    default:
+                        return null;
+                }
             } else {
                 return null;
             }

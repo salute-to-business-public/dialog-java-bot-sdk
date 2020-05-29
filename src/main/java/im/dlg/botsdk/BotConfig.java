@@ -9,28 +9,22 @@ import static im.dlg.botsdk.retry.RetryOptions.*;
  */
 public class BotConfig {
 
-    private final String botName;
-    private final String token;
+    private final String name;
+    private final BotCredentials credentials;
     private final RetryOptions retryOptions;
 
-    private BotConfig(String botName, String token, RetryOptions retryOptions) {
-        this.botName = botName;
-        this.token = token;
+    private BotConfig(String name, BotCredentials credentials, RetryOptions retryOptions) {
+        this.name = name;
+        this.credentials = credentials;
         this.retryOptions = retryOptions;
     }
 
-    /**
-     * @return Token for bot auth
-     */
-    public String getToken() {
-        return token;
+    public String getName() {
+        return name;
     }
 
-    /**
-     * @return Used as application name
-     */
-    public String getBotName() {
-        return botName;
+    public BotCredentials getCredentials() {
+        return credentials;
     }
 
     public RetryOptions getRetryOptions() {
@@ -40,7 +34,7 @@ public class BotConfig {
     public static final class Builder {
 
         private String botName = "JavaBot";
-        private String token;
+        private BotCredentials credentials;
         private RetryOptions retryOptions = DEFAULT_RETRY_OPTIONS;
 
         private Builder() {
@@ -50,13 +44,13 @@ public class BotConfig {
             return new Builder();
         }
 
-        public Builder withBotName(String botName) {
+        public Builder withName(String botName) {
             this.botName = botName;
             return this;
         }
 
-        public Builder withToken(String token) {
-            this.token = token;
+        public Builder withCredentials(BotCredentials credentials) {
+            this.credentials = credentials;
             return this;
         }
 
@@ -66,7 +60,7 @@ public class BotConfig {
         }
 
         public BotConfig build() {
-            return new BotConfig(botName, token, retryOptions);
+            return new BotConfig(botName, credentials, retryOptions);
         }
 
     }
