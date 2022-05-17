@@ -7,7 +7,7 @@ Dialog Java Bot SDK.
 
 [API Reference](https://botapi.dlg.im/overview-summary.html)
 
-[Example](https://github.com/dialogs/java-bot-sdk/tree/master/examples)
+[Example](https://github.com/salute-to-business-public/dialog-java-bot-sdk/tree/master/examples)
 
 [Community chat](https://dlg.im/@botsfordialog)
 

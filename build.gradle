@@ -10,8 +10,8 @@ apply plugin: 'com.jfrog.bintray'
 
 ext {
     grpcVersion = '1.26.0'
-    gitUrl = "https://github.com/dialogs/java-bot-sdk"
-    issueTrackerUrl = "https://github.com/dialogs/java-bot-sdk/issues"
+    gitUrl = "https://github.com/salute-to-business-public/dialog-java-bot-sdk"
+    issueTrackerUrl = "https://github.com/salute-to-business-public/dialog-java-bot-sdk/issues"
     libraryDescription = "Bot SDK for java developers"
     bintrayUser = System.env.bintrayUser != null ? System.env.bintrayUser : ""
     bintrayPassword = System.env.bintrayPassword != null ? System.env.bintrayPassword : ""
