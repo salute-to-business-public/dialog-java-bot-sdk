@@ -2,15 +2,6 @@
 Java Bot SDK
 ============
 
-Dialog Java Bot SDK.
-
-[Documentation](https://docs.dlg.im/bots/java-bot.html)
-
-[API Reference](https://botapi.dlg.im/overview-summary.html)
-
-[Example](https://github.com/salute-to-business-public/dialog-java-bot-sdk/tree/master/examples)
-
-[Community chat](https://dlg.im/@botsfordialog)
 
 
 How to use the SDK with maven/gradle?
