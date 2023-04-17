@@ -1,5 +1,6 @@
 package im.dlg.botsdk.status;
 
+import io.grpc.stub.StreamObserver;
 import im.dlg.botsdk.listeners.online.GroupOnlineStatusListener;
 import im.dlg.botsdk.listeners.online.UserOnlineStatusListener;
 import im.dlg.botsdk.listeners.typing.GroupTypingStatusListener;
@@ -7,8 +8,6 @@ import im.dlg.botsdk.listeners.typing.UserTypingStatusListener;
 import im.dlg.botsdk.model.Group;
 import im.dlg.botsdk.model.Peer;
 import im.dlg.botsdk.model.User;
-import im.dlg.botsdk.utils.PeerUtils;
-import io.grpc.stub.StreamObserver;
 
 import static im.dlg.grpc.services.SequenceAndUpdatesOuterClass.PeersList;
 import static im.dlg.grpc.services.SequenceAndUpdatesOuterClass.WeakUpdateCommand;
@@ -67,7 +66,7 @@ public class StatusStream {
 
     private void subscribeToPeerOnline(Peer peer) {
         PeersList peersList = PeersList.newBuilder()
-                .addPeers(PeerUtils.toServerPeer(peer))
+                .addPeers(peer.toServerPeer())
                 .build();
 
         SubscribeToOnlines subscribeToOnlines = SubscribeToOnlines.newBuilder()
@@ -84,7 +83,7 @@ public class StatusStream {
 
     private void unsubscribeFromPeerOnline(Peer peer) {
         PeersList peersList = PeersList.newBuilder()
-                .addPeers(PeerUtils.toServerPeer(peer))
+                .addPeers(peer.toServerPeer())
                 .build();
 
         WeakUpdateCommand command = newBuilder()
@@ -95,7 +94,7 @@ public class StatusStream {
 
     private void subscribeToPeerTyping(Peer peer) {
         PeersList peersList = PeersList.newBuilder()
-                .addPeers(PeerUtils.toServerPeer(peer))
+                .addPeers(peer.toServerPeer())
                 .build();
 
         WeakUpdateCommand command = newBuilder()
@@ -106,7 +105,7 @@ public class StatusStream {
 
     private void unsubscribeFromPeerTyping(Peer peer) {
         PeersList peersList = PeersList.newBuilder()
-                .addPeers(PeerUtils.toServerPeer(peer))
+                .addPeers(peer.toServerPeer())
                 .build();
 
         WeakUpdateCommand command = newBuilder()

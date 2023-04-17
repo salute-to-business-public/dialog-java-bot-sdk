@@ -2,7 +2,7 @@ package im.dlg.botsdk;
 
 import im.dlg.botsdk.retry.RetryOptions;
 
-import static im.dlg.botsdk.retry.RetryOptions.*;
+import static im.dlg.botsdk.retry.RetryOptions.DEFAULT_RETRY_OPTIONS;
 
 /**
  * Main configuration file

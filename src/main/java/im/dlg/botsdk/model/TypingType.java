@@ -3,21 +3,24 @@ package im.dlg.botsdk.model;
 import im.dlg.grpc.services.PresenceOuterClass;
 
 public enum TypingType {
+    UNKNOWN,
     TEXT,
     VOICE;
 
     public static TypingType fromGrpcType(PresenceOuterClass.TypingType typingType) {
         switch (typingType) {
             case TYPINGTYPE_TEXT:
-                return TypingType.TEXT;
+                return TEXT;
             case TYPINGTYPE_VOICE:
-                return TypingType.VOICE;
+                return VOICE;
+            case UNRECOGNIZED:
+            case TYPINGTYPE_UNKNOWN:
             default:
                 return null;
         }
     }
 
-    public PresenceOuterClass.TypingType toGrpcType() {
+    public PresenceOuterClass.TypingType toServerType() {
         switch (this) {
             case TEXT:
                 return PresenceOuterClass.TypingType.TYPINGTYPE_TEXT;

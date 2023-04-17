@@ -1,17 +1,34 @@
 package im.dlg.botsdk.model.interactive;
 
+import im.dlg.grpc.services.MessagingOuterClass;
+import lombok.Getter;
+
 public class InteractiveAction {
 
     public enum Style {
         PRIMARY,
         DANGER,
-        DEFAULT
+        DEFAULT;
+
+        public MessagingOuterClass.InteractiveMediaStyle toServer() {
+            if (this == InteractiveAction.Style.DANGER) {
+                return MessagingOuterClass.InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DANGER;
+            } else if (this == InteractiveAction.Style.PRIMARY) {
+                return MessagingOuterClass.InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_PRIMARY;
+            } else {
+                return MessagingOuterClass.InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DEFAULT;
+            }
+        }
     }
 
-    private String id;
-    private Style style;
-    private InteractiveWidget widget;
-    private InteractiveConfirm confirm;
+    @Getter
+    private final String id;
+    @Getter
+    private final Style style;
+    @Getter
+    private final InteractiveWidget widget;
+    @Getter
+    private final InteractiveConfirm confirm;
 
     public InteractiveAction(String id, Style style, InteractiveWidget widget, InteractiveConfirm confirm) {
         this.id = id;
@@ -26,21 +43,5 @@ public class InteractiveAction {
 
     public InteractiveAction(String id, InteractiveWidget widget) {
         this(id, Style.PRIMARY, widget, null);
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public Style getStyle() {
-        return style;
-    }
-
-    public InteractiveWidget getWidget() {
-        return widget;
-    }
-
-    public InteractiveConfirm getConfirm() {
-        return confirm;
     }
 }

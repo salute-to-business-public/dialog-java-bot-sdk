@@ -1,29 +1,31 @@
 package im.dlg.botsdk.model.media;
 
 import im.dlg.grpc.services.MediaAndFilesOuterClass;
+import lombok.Getter;
 
 public class FileLocation {
-    private long fileId;
-    private long accessHash;
+    @Getter
+    private final long fileId;
+    @Getter
+    private final long accessHash;
+
+    public FileLocation(MediaAndFilesOuterClass.FileLocation fileLocation) {
+        fileId = fileLocation.getFileId();
+        accessHash = fileLocation.getAccessHash();
+    }
 
     public FileLocation(long fileId, long accessHash) {
         this.fileId = fileId;
         this.accessHash = accessHash;
     }
 
-    public long getFileId() {
-        return fileId;
-    }
 
-    public long getAccessHash() {
-        return accessHash;
-    }
-
-    public static MediaAndFilesOuterClass.FileLocation buildFileLocation(FileLocation fileLocation) {
+    public MediaAndFilesOuterClass.FileLocation toServer() {
         return MediaAndFilesOuterClass.FileLocation
                 .newBuilder()
-                .setFileId(fileLocation.getFileId())
-                .setAccessHash(fileLocation.getAccessHash())
+                .setFileId(fileId)
+                .setAccessHash(accessHash)
                 .build();
     }
+
 }

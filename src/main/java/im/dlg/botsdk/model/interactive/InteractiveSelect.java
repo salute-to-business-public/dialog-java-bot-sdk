@@ -1,5 +1,9 @@
 package im.dlg.botsdk.model.interactive;
 
+import com.google.protobuf.StringValue;
+import im.dlg.grpc.services.MessagingOuterClass;
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,9 +12,12 @@ import java.util.List;
  */
 public class InteractiveSelect implements InteractiveWidget {
 
+    @Getter
     private String label;
+    @Getter
     private String defaultValue;
-    private List<InteractiveSelectOption> options = new ArrayList<>();
+    @Getter
+    private List<InteractiveSelectOption> options;
 
     public InteractiveSelect(String label, String defaultValue, List<InteractiveSelectOption> options) {
         this.label = label;
@@ -22,15 +29,24 @@ public class InteractiveSelect implements InteractiveWidget {
         this.options = options;
     }
 
-    public String getLabel() {
-        return label;
-    }
+    public MessagingOuterClass.InteractiveMediaWidget toServer() {
+        InteractiveSelect select = this;
+        MessagingOuterClass.InteractiveMediaSelect.Builder apiSelect = MessagingOuterClass.InteractiveMediaSelect.newBuilder();
 
-    public String getDefaultValue() {
-        return defaultValue;
-    }
+        for (InteractiveSelectOption selectOption : select.getOptions()) {
+            MessagingOuterClass.InteractiveMediaSelectOption.Builder apiSelectOption = MessagingOuterClass.InteractiveMediaSelectOption.newBuilder();
+            apiSelectOption.setValue(selectOption.getValue()).setLabel(selectOption.getLabel());
+            apiSelect.addOptions(apiSelectOption);
+        }
 
-    public List<InteractiveSelectOption> getOptions() {
-        return options;
+        if (select.getLabel() != null && !select.getLabel().isEmpty()) {
+            apiSelect.setLabel(StringValue.of(select.getLabel()));
+        }
+
+        if (select.getDefaultValue() != null && !select.getDefaultValue().isEmpty()) {
+            apiSelect.setDefaultValue(StringValue.of(select.getDefaultValue()));
+        }
+
+        return MessagingOuterClass.InteractiveMediaWidget.newBuilder().setInteractiveMediaSelect(apiSelect).build();
     }
 }

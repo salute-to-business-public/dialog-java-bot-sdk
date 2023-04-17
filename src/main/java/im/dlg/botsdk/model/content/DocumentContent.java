@@ -2,18 +2,28 @@ package im.dlg.botsdk.model.content;
 
 import im.dlg.grpc.services.MediaAndFilesOuterClass;
 import im.dlg.grpc.services.MessagingOuterClass;
+import lombok.Getter;
 
 public class DocumentContent extends Content {
 
-    private long fileId;
-    private long accessHash;
-    private int fileSize;
-    private String name;
-    private String mimeType;
-    private MediaAndFilesOuterClass.FastThumb fastThumb;
-    private MessagingOuterClass.DocumentEx ext;
+    @Getter
+    private final long fileId;
+    @Getter
+    private final long accessHash;
+    @Getter
+    private final int fileSize;
+    @Getter
+    private final String name;
+    @Getter
+    private final String mimeType;
+    @Getter
+    private final MediaAndFilesOuterClass.FastThumb fastThumb;
+    @Getter
+    private final MessagingOuterClass.DocumentEx ext;
+    @Getter
+    private final String caption;
 
-    DocumentContent(MessagingOuterClass.DocumentMessage document) {
+    public DocumentContent(MessagingOuterClass.DocumentMessage document) {
         this.fileId = document.getFileId();
         this.accessHash = document.getAccessHash();
         this.fileSize = document.getFileSize();
@@ -21,37 +31,11 @@ public class DocumentContent extends Content {
         this.mimeType = document.getMimeType();
         this.fastThumb = document.getThumb();
         this.ext = document.getExt();
+        this.caption = document.getCaption().getValue();
     }
 
-    public long getFileId() {
-        return fileId;
-    }
-
-    public long getAccessHash() {
-        return accessHash;
-    }
-
-    public int getFileSize() {
-        return fileSize;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getMimeType() {
-        return mimeType;
-    }
-
-    public MediaAndFilesOuterClass.FastThumb getFastThumb() {
-        return fastThumb;
-    }
-
-    public MessagingOuterClass.DocumentEx getExt() {
-        return ext;
-    }
-
-    public static MessagingOuterClass.DocumentMessage createDocumentMessage(DocumentContent content) {
+    public MessagingOuterClass.DocumentMessage toServer() {
+        DocumentContent content = this;
         MediaAndFilesOuterClass.FastThumb thumb = content.getFastThumb();
         MediaAndFilesOuterClass.FastThumb fastThumb = MediaAndFilesOuterClass.FastThumb
                 .newBuilder()
@@ -71,4 +55,5 @@ public class DocumentContent extends Content {
                 .setExt(content.getExt())
                 .build();
     }
+
 }

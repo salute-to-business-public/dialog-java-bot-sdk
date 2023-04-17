@@ -1,15 +1,15 @@
 package im.dlg.botsdk;
 
-import im.dlg.botsdk.api.*;
-import im.dlg.botsdk.internal.InternalBot;
 import io.grpc.ManagedChannel;
 import org.asynchttpclient.AsyncHttpClient;
+import im.dlg.botsdk.api.*;
+import im.dlg.botsdk.internal.InternalBot;
 
 import java.util.concurrent.CountDownLatch;
 
 public class Bot {
 
-    private final CountDownLatch stopLatch = new CountDownLatch(1);
+    private final CountDownLatch stopLatch = new CountDownLatch(1000);
     private final MessagingApi messagingApi;
     private final UsersApi users;
     private final InteractiveApi interactiveApi;
@@ -19,17 +19,24 @@ public class Bot {
     private final SyncApi syncApi;
     private final BotProfileApi botProfileApi;
     private final StatusApi statusApi;
+    private final StickerApi stickerApi;
+    private final ReactionsApi reactionsApi;
+    private final ThreadApi threadApi;
 
     public Bot(ManagedChannel channel, InternalBot internalBot, AsyncHttpClient asyncHttpClient) {
-        this.interactiveApi = new InteractiveApi(channel, internalBot);
+
         this.mediaAndFilesApi = new MediaAndFilesApi(channel, internalBot, asyncHttpClient);
         this.messagingApi = new MessagingApi(channel, internalBot, mediaAndFilesApi);
-        this.groupsApi = new GroupsApi(channel, internalBot);
+        this.interactiveApi = new InteractiveApi(channel, internalBot, this.messagingApi);
+        this.groupsApi = new GroupsApi(channel, internalBot, mediaAndFilesApi);
         this.peersApi = new PeersApi(channel, internalBot);
         this.users = new UsersApi(channel, internalBot, peersApi);
         this.syncApi = new SyncApi(internalBot);
-        this.botProfileApi = new BotProfileApi(channel, internalBot);
         this.statusApi = new StatusApi(channel, internalBot);
+        this.stickerApi = new StickerApi(channel, internalBot);
+        this.reactionsApi = new ReactionsApi(channel, internalBot);
+        this.threadApi = new ThreadApi(channel, internalBot);
+        this.botProfileApi = new BotProfileApi(channel, internalBot, mediaAndFilesApi);
     }
 
     /**
@@ -46,6 +53,10 @@ public class Bot {
      */
     public void stop() {
         stopLatch.countDown();
+    }
+
+    public void kill() {
+        System.exit(0);
     }
 
     /**
@@ -96,4 +107,15 @@ public class Bot {
         return statusApi;
     }
 
+    public StickerApi stickerApi() {
+        return stickerApi;
+    }
+
+    public ReactionsApi reactionsApi() {
+        return reactionsApi;
+    }
+
+    public ThreadApi threadApi() {
+        return threadApi;
+    }
 }

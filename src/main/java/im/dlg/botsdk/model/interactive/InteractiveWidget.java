@@ -1,5 +1,7 @@
 package im.dlg.botsdk.model.interactive;
 
-public interface InteractiveWidget {
+import im.dlg.grpc.services.MessagingOuterClass;
 
+public interface InteractiveWidget {
+    MessagingOuterClass.InteractiveMediaWidget toServer();
 }

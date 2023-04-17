@@ -1,23 +1,26 @@
 package im.dlg.botsdk.api;
 
 import com.google.protobuf.StringValue;
-import im.dlg.grpc.services.MessagingGrpc;
-import im.dlg.grpc.services.MessagingOuterClass.*;
 import im.dlg.botsdk.internal.InternalBot;
 import im.dlg.botsdk.listeners.InteractiveEventListener;
 import im.dlg.botsdk.model.InteractiveEvent;
 import im.dlg.botsdk.model.Peer;
 import im.dlg.botsdk.model.interactive.*;
 import im.dlg.botsdk.utils.MsgUtils;
-import im.dlg.botsdk.utils.PeerUtils;
 import im.dlg.botsdk.utils.UUIDUtils;
+import im.dlg.grpc.services.MessagingGrpc;
+import im.dlg.grpc.services.MessagingOuterClass;
+import im.dlg.grpc.services.MessagingOuterClass.*;
 import io.grpc.ManagedChannel;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -31,17 +34,19 @@ public class InteractiveApi {
     private final ManagedChannel channel;
     private final InternalBot internalBot;
     private InteractiveEventListener listener = null;
+    private final MessagingApi messagingApi;
 
-    public InteractiveApi(ManagedChannel channel, InternalBot internalBot) {
+    public InteractiveApi(ManagedChannel channel, InternalBot internalBot, MessagingApi messagingApi) {
         this.channel = channel;
         this.internalBot = internalBot;
+        this.messagingApi = messagingApi;
 
         internalBot.subscribeOn(UpdateInteractiveMediaEvent.class, evt -> {
             try {
-                internalBot.findUserOutPeer(evt.getUid()).thenAccept(opt -> opt.ifPresent(outPeer -> {
-                    onEventInternal(new InteractiveEvent(UUIDUtils.convert(evt.getMid()), evt.getId(),
-                            evt.getValue(), PeerUtils.toDomainPeer(outPeer)));
-                }));
+                internalBot
+                        .findUserOutPeer(evt.getUid())
+                        .thenAccept(opt -> opt.ifPresent(outPeer -> onEventInternal(new InteractiveEvent(UUIDUtils.convert(evt.getMid()), evt.getId(),
+                        evt.getValue(), new Peer(outPeer)))));
             } catch (Throwable throwable) {
                 log.error("Failed to subscribe", throwable);
             }
@@ -67,7 +72,7 @@ public class InteractiveApi {
      */
     @SuppressWarnings("unused")
     public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group) {
-        return send(peer, group, null);
+        return send(peer, group, null, null );
     }
 
     /**
@@ -82,6 +87,35 @@ public class InteractiveApi {
         return update(uuid, group, null);
     }
 
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull List<InteractiveGroup> group){
+        return send(peer, group);
+    }
+
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull List<InteractiveGroup> group, @Nullable Integer target){
+        return send(peer, group, null, target);
+    }
+
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull List<InteractiveGroup> group, @Nullable String text){
+        return send(peer, group, text, null);
+    }
+
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull List<InteractiveGroup> group, @Nullable String text, Integer target) {
+        RequestSendMessage.Builder request = RequestSendMessage.newBuilder()
+                .setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
+                .setPeer(peer.toServerOutPeer());
+
+        request.setMessage(buildMessageContent(group, text));
+
+        if (target != null){
+            request.setIsOnlyForUser(target);
+        }
+
+        return internalBot.withToken(
+                MessagingGrpc.newFutureStub(channel),
+                stub -> stub.sendMessage(request.build()))
+                .thenApply(resp -> UUIDUtils.convert(resp.getMessageId()));
+    }
+
     /**
      * Send an interactive action group and text to particular peer
      *
@@ -90,21 +124,18 @@ public class InteractiveApi {
      * @param text - message text (may be null)
      * @return - future with message UUID, that completes when deliver to server
      */
-    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group, @Nullable String text) {
-        RequestSendMessage.Builder request = RequestSendMessage.newBuilder()
-                .setDeduplicationId(MsgUtils.uniqueCurrentTimeMS())
-                .setPeer(PeerUtils.toServerOutPeer(peer));
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group, @Nullable String text, @Nullable Integer target) {
+        ArrayList<InteractiveGroup> groups = new ArrayList<>();
+        groups.add(group);
+        return send(peer, groups, text, target);
+    }
 
-        if (text != null) {
-            request.setMessage(buildMessageContent(group, text));
-        } else {
-            request.setMessage(buildMessageContent(group));
-        }
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group, @Nullable Integer target){
+        return send(peer, group, null, target );
+    }
 
-        return internalBot.withToken(
-                MessagingGrpc.newFutureStub(channel),
-                stub -> stub.sendMessage(request.build()))
-                .thenApply(resp -> UUIDUtils.convert(resp.getMessageId()));
+    public CompletableFuture<UUID> send(@Nonnull Peer peer, @Nonnull InteractiveGroup group, @Nullable String text){
+        return send(peer, group, text, null );
     }
 
     /**
@@ -121,11 +152,7 @@ public class InteractiveApi {
                 .setMid(UUIDUtils.convertToApi(uuid))
                 .setLastEditedAt(Instant.now().toEpochMilli());
 
-        if (text != null) {
-            request.setUpdatedMessage(buildMessageContent(group, text));
-        } else {
-            request.setUpdatedMessage(buildMessageContent(group));
-        }
+        request.setUpdatedMessage(buildMessageContent(group, text));
 
         return internalBot.withToken(
                 MessagingGrpc.newFutureStub(channel),
@@ -133,43 +160,24 @@ public class InteractiveApi {
                 .thenApply(resp -> UUIDUtils.convert(resp.getMid()));
     }
 
-    private MessageContent buildMessageContent(InteractiveGroup group) {
-        return buildMessageContent(group, null);
+    public CompletableFuture<Void> doInteractiveAction(UUID uuid, String id){
+        RequestDoInteractiveMediaAction request = RequestDoInteractiveMediaAction.newBuilder()
+                .setMid(UUIDUtils.convertToApi(uuid))
+                .setId(id)
+                .build();
+        return internalBot.withToken(
+                MessagingGrpc.newFutureStub(channel),
+                stub -> stub.doInteractiveMediaAction(request)).thenCompose(t -> null);
     }
 
-    private MessageContent buildMessageContent(InteractiveGroup group, String text) {
-        InteractiveMediaGroup.Builder apiMediaGroup = InteractiveMediaGroup.newBuilder();
-
-        if (group.getTitle() != null && !group.getTitle().isEmpty()) {
-            apiMediaGroup.setTitle(StringValue.of(group.getTitle()));
-        }
-
-        if (group.getDescription() != null && !group.getDescription().isEmpty()) {
-            apiMediaGroup.setDescription(StringValue.of(group.getDescription()));
-        }
-
-        for (InteractiveAction action : group.getActions()) {
-            InteractiveMedia.Builder apiMedia = InteractiveMedia.newBuilder()
-                    .setId(action.getId())
-                    .setStyle(buildStyle(action.getStyle()));
-
-            InteractiveWidget widget = action.getWidget();
-
-            if (widget instanceof InteractiveButton) {
-                apiMedia.setWidget(buildButton((InteractiveButton) widget));
-            } else if (widget instanceof InteractiveSelect) {
-                apiMedia.setWidget(buildSelectMenu((InteractiveSelect) widget));
-            }
-
-            if (action.getConfirm() != null) {
-                apiMedia.setConfirm(buildConfirm(action));
-            }
-
-            apiMediaGroup.addActions(apiMedia);
+    private MessageContent buildMessageContent(List<InteractiveGroup> groups, String text){
+        List<InteractiveMediaGroup> apiMediaGroups = new ArrayList<>();
+        for (InteractiveGroup group: groups) {
+            apiMediaGroups.add(group.toServer());
         }
 
         MessageMedia messageMedia = MessageMedia.newBuilder()
-                .addActions(apiMediaGroup)
+                .addAllActions(apiMediaGroups)
                 .build();
 
         TextMessage.Builder textAndMedia = TextMessage.newBuilder().addMedia(messageMedia);
@@ -182,66 +190,10 @@ public class InteractiveApi {
                 .build();
     }
 
-    private InteractiveMediaWidget buildButton(InteractiveButton button) {
-        InteractiveMediaButton.Builder btn = InteractiveMediaButton.newBuilder()
-                .setValue(button.getValue());
-
-        if (button.getLabel() != null && !button.getLabel().isEmpty()) {
-            btn.setLabel(StringValue.of(button.getLabel()));
-        }
-
-        return InteractiveMediaWidget.newBuilder().setInteractiveMediaButton(btn).build();
-    }
-
-    private InteractiveMediaWidget buildSelectMenu(InteractiveSelect select) {
-        InteractiveMediaSelect.Builder apiSelect = InteractiveMediaSelect.newBuilder();
-
-        for (InteractiveSelectOption selectOption : select.getOptions()) {
-            InteractiveMediaSelectOption.Builder apiSelectOption = InteractiveMediaSelectOption.newBuilder();
-            apiSelectOption.setValue(selectOption.getValue()).setLabel(selectOption.getLabel());
-            apiSelect.addOptions(apiSelectOption);
-        }
-
-        if (select.getLabel() != null && !select.getLabel().isEmpty()) {
-            apiSelect.setLabel(StringValue.of(select.getLabel()));
-        }
-
-        if (select.getDefaultValue() != null && !select.getDefaultValue().isEmpty()) {
-            apiSelect.setDefaultValue(StringValue.of(select.getDefaultValue()));
-        }
-
-        return InteractiveMediaWidget.newBuilder().setInteractiveMediaSelect(apiSelect).build();
-    }
-
-    private InteractiveMediaConfirm.Builder buildConfirm(InteractiveAction action) {
-        InteractiveMediaConfirm.Builder confirm = InteractiveMediaConfirm.newBuilder();
-
-        if (action.getConfirm().getText() != null) {
-            confirm.setText(StringValue.of(action.getConfirm().getText()));
-        }
-
-        if (action.getConfirm().getTitle() != null) {
-            confirm.setTitle(StringValue.of(action.getConfirm().getTitle()));
-        }
-
-        if (action.getConfirm().getOk() != null) {
-            confirm.setOk(StringValue.of(action.getConfirm().getOk()));
-        }
-
-        if (action.getConfirm().getDismiss() != null) {
-            confirm.setDismiss(StringValue.of(action.getConfirm().getDismiss()));
-        }
-        return confirm;
-    }
-
-    private InteractiveMediaStyle buildStyle(InteractiveAction.Style style) {
-        if (style == InteractiveAction.Style.DANGER) {
-            return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DANGER;
-        } else if (style == InteractiveAction.Style.PRIMARY) {
-            return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_PRIMARY;
-        } else {
-            return InteractiveMediaStyle.INTERACTIVEMEDIASTYLE_DEFAULT;
-        }
+    private MessageContent buildMessageContent(InteractiveGroup group, String text) {
+        ArrayList<InteractiveGroup> groups = new ArrayList<>();
+        groups.add(group);
+        return buildMessageContent(groups, text);
     }
 
     private void onEventInternal(InteractiveEvent event) {

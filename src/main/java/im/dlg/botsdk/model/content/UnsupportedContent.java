@@ -1,3 +1,4 @@
 package im.dlg.botsdk.model.content;
 
-class UnsupportedContent extends Content {}
+class UnsupportedContent extends Content {
+}

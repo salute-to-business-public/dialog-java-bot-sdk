@@ -1,23 +1,25 @@
 package im.dlg.botsdk;
 
-import im.dlg.botsdk.internal.InternalBot;
-import im.dlg.botsdk.utils.NetUtils;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import org.apache.http.annotation.Obsolete;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import im.dlg.botsdk.internal.InternalBot;
+import im.dlg.botsdk.utils.NetUtils;
 
 import java.io.File;
 import java.security.Security;
+import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
 public class BotSystem {
@@ -48,6 +50,7 @@ public class BotSystem {
 
                 SslContext sslContext = SslContextBuilder.forClient()
                         .keyManager(NetUtils.createKeyFactory(certFile, config.getCertPassword()))
+                        .sslProvider(SslProvider.OPENSSL)
                         .build();
 
                 builder.setSslContext(sslContext);
@@ -59,16 +62,16 @@ public class BotSystem {
     private static ManagedChannel createChannel(BotSystemConfig config) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
 
-        NettyChannelBuilder nettyChannelBuilder = (NettyChannelBuilder) ManagedChannelBuilder
+        NettyChannelBuilder nettyChannelBuilder = NettyChannelBuilder
                 .forAddress(config.getHost(), config.getPort())
                 .idleTimeout(15, SECONDS)
                 .keepAliveTime(30, SECONDS);
-
         if (config.getCertPath() != null && config.getCertPassword() != null) {
             File certFile = new File(config.getCertPath());
 
             SslContext sslContext = GrpcSslContexts.forClient()
                     .keyManager(NetUtils.createKeyFactory(certFile, config.getCertPassword()))
+                    .sslProvider(SslProvider.OPENSSL)
                     .build();
 
             nettyChannelBuilder.sslContext(sslContext);
@@ -83,6 +86,12 @@ public class BotSystem {
         }
 
         return nettyChannelBuilder.build();
+    }
+
+    public CompletableFuture<Bot> startBot(){
+        BotConfig botConfig = BotConfig.Builder.newBuilder()
+                .build();
+        return startBot(botConfig);
     }
 
     public CompletableFuture<Bot> startBot(BotConfig config) {

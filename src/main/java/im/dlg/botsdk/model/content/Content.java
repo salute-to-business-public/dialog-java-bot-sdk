@@ -4,27 +4,26 @@ import im.dlg.grpc.services.MessagingOuterClass;
 
 public abstract class Content {
     public static Content fromMessage(MessagingOuterClass.MessageContent message) {
-        int key = message.getBodyCase().getNumber();
+        MessagingOuterClass.MessageContent.BodyCase key = message.getBodyCase();
         switch (key) {
-            case 1:
+            case TEXTMESSAGE:
                 return new TextContent(message.getTextMessage());
-            case 2:
+            case SERVICEMESSAGE:
                 return new ServiceContent(message.getServiceMessage());
-            case 3:
+            case DOCUMENTMESSAGE:
                 return new DocumentContent(message.getDocumentMessage());
-            case 4:
+            case JSONMESSAGE:
                 return new JsonContent(message.getJsonMessage());
-            case 5:
-                return new UnsupportedContent();
-            case 6:
-                return new UnsupportedContent();
-            case 7:
-                return new UnsupportedContent();
-            case 8:
+            case STICKERMESSAGE:
+                return new StickerContent(message.getStickerMessage());
+            case EMPTYMESSAGE:
                 return new EmptyContent(message.getEmptyMessage());
-            case 9:
-                return new UnsupportedContent();
+            case DELETEDMESSAGE:
+            case BINARYMESSAGE:
+            case BODY_NOT_SET:
+            case UNSUPPORTEDMESSAGE:
+            default:
+                return new im.dlg.botsdk.model.content.UnsupportedContent();
         }
-        return new UnsupportedContent();
     }
 }

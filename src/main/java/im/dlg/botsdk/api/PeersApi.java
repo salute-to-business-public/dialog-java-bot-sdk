@@ -1,12 +1,10 @@
 package im.dlg.botsdk.api;
 
-import im.dlg.grpc.services.Peers;
 import im.dlg.grpc.services.SearchGrpc;
 import im.dlg.grpc.services.SearchOuterClass;
+import io.grpc.ManagedChannel;
 import im.dlg.botsdk.internal.InternalBot;
 import im.dlg.botsdk.model.Peer;
-import im.dlg.botsdk.utils.PeerUtils;
-import io.grpc.ManagedChannel;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -28,13 +26,6 @@ public class PeersApi {
         return internalBot.withToken(
                 SearchGrpc.newFutureStub(channel),
                 stub -> stub.resolvePeer(request)
-        ).thenApply(res -> {
-                    Peers.OutPeer peer = res.getPeer();
-
-                    return new Peer(
-                            peer.getId(),
-                            PeerUtils.toDomainPeerType(peer.getType()),
-                            peer.getAccessHash());
-                });
+        ).thenApply(res -> new Peer(res.getPeer()));
     }
 }

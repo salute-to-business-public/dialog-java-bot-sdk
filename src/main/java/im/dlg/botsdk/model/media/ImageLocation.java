@@ -1,12 +1,17 @@
 package im.dlg.botsdk.model.media;
 
 import im.dlg.grpc.services.MediaAndFilesOuterClass;
+import lombok.Getter;
 
 public class ImageLocation {
-    private FileLocation fileLocation;
-    private int width;
-    private int height;
-    private int fileSize;
+    @Getter
+    private final FileLocation fileLocation;
+    @Getter
+    private final int width;
+    @Getter
+    private final int height;
+    @Getter
+    private final int fileSize;
 
     public ImageLocation(FileLocation fileLocation, int width, int height, int fileSize) {
         this.fileLocation = fileLocation;
@@ -15,31 +20,13 @@ public class ImageLocation {
         this.fileSize = fileSize;
     }
 
-    public FileLocation getFileLocation() {
-        return fileLocation;
-    }
-
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public int getFileSize() {
-        return fileSize;
-    }
-
-    public static MediaAndFilesOuterClass.ImageLocation buildImageLocation(ImageLocation imageLocation) {
+    protected MediaAndFilesOuterClass.ImageLocation toServer() {
         return MediaAndFilesOuterClass.ImageLocation
                 .newBuilder()
-                .setWidth(imageLocation.getWidth())
-                .setHeight(imageLocation.getHeight())
-                .setFileSize(imageLocation.getFileSize())
-                .setFileLocation(FileLocation.buildFileLocation(
-                        new FileLocation(imageLocation.getFileLocation().getFileId(),
-                                imageLocation.getFileLocation().getAccessHash())))
+                .setWidth(this.width)
+                .setHeight(this.height)
+                .setFileSize(this.fileSize)
+                .setFileLocation(this.fileLocation.toServer())
                 .build();
     }
 }

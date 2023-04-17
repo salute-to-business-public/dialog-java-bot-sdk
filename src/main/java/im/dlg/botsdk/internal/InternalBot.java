@@ -1,49 +1,51 @@
 package im.dlg.botsdk.internal;
 
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.Empty;
 import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.StringValue;
-import im.dlg.grpc.services.*;
-import im.dlg.grpc.services.MessagingOuterClass.Dialog;
-import im.dlg.grpc.services.MessagingOuterClass.HistoryMessage;
-import im.dlg.grpc.services.MessagingOuterClass.ListLoadMode;
-import im.dlg.grpc.services.MessagingOuterClass.RequestLoadDialogs;
 import im.dlg.botsdk.BotConfig;
 import im.dlg.botsdk.BotCredentials;
-import im.dlg.botsdk.model.Message;
-import im.dlg.botsdk.model.content.Content;
 import im.dlg.botsdk.listeners.UpdateListener;
+import im.dlg.botsdk.model.Message;
+import im.dlg.botsdk.model.Peer;
+import im.dlg.botsdk.model.content.Content;
 import im.dlg.botsdk.retry.TaskManager;
-import im.dlg.botsdk.utils.*;
+import im.dlg.botsdk.utils.Constants;
+import im.dlg.botsdk.utils.UUIDUtils;
+import im.dlg.grpc.services.*;
+import im.dlg.grpc.services.MessagingOuterClass.HistoryMessage;
+import im.dlg.grpc.services.MessagingOuterClass.ListLoadMode;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.futureconverter.java8guava.FutureConverter;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static im.dlg.grpc.services.AuthenticationOuterClass.*;
 import static im.dlg.grpc.services.Peers.*;
-import static im.dlg.grpc.services.RegistrationOuterClass.*;
+import static im.dlg.grpc.services.RegistrationOuterClass.RequestRegisterDevice;
 import static im.dlg.grpc.services.SequenceAndUpdatesOuterClass.*;
 
+@Slf4j
 public class InternalBot {
 
     public static final long RECONNECT_DELAY = 1000;
     private static final Integer APP_ID = 11011;
-
-    private final Logger log = LoggerFactory.getLogger(InternalBot.class);
 
     private final Map<String, OutPeer> outPeerMap = new ConcurrentHashMap<>();
     private final Map<Class, List<UpdateListener>> subscribers = new ConcurrentHashMap<>();
@@ -61,6 +63,9 @@ public class InternalBot {
         this.config = config;
         this.anonymousAuth = anonymousAuth;
     }
+
+    @Getter
+    private Integer botId;
 
     public CompletableFuture<Void> start() {
         CompletableFuture<Metadata> meta = new CompletableFuture<>();
@@ -115,14 +120,14 @@ public class InternalBot {
                         )).thenApply(res -> new ImmutablePair<>(res.getUser(), m));
                     case PASSWORD:
                         return FutureConverter.toCompletableFuture(withToken(m,
-                                AuthenticationGrpc.newFutureStub(channel),
-                                stub -> stub.startUsernameAuth(
-                                        RequestStartUsernameAuth.newBuilder()
-                                                .setUsername(config.getName())
-                                                .addPreferredLanguages("RU")
-                                                .setTimeZone(StringValue.newBuilder().setValue("+3").build())
-                                                .build()
-                                )))
+                                        AuthenticationGrpc.newFutureStub(channel),
+                                        stub -> stub.startUsernameAuth(
+                                                RequestStartUsernameAuth.newBuilder()
+                                                        .setUsername(config.getName())
+                                                        .addPreferredLanguages("RU")
+                                                        .setTimeZone(StringValue.newBuilder().setValue("+3").build())
+                                                        .build()
+                                        )))
                                 .thenCompose(res -> FutureConverter.toCompletableFuture(withToken(m,
                                         AuthenticationGrpc.newFutureStub(channel),
                                         stub -> stub.validatePassword(
@@ -147,6 +152,7 @@ public class InternalBot {
                     }
             );
 
+            botId = p.getLeft().getId();
             log.info("Bot authorized with id = {}", p.getLeft().getId());
             return null;
         });
@@ -160,7 +166,7 @@ public class InternalBot {
     }
 
     public <T extends AbstractStub<T>, R> CompletableFuture<R> withToken(T stub, Function<T, ListenableFuture<R>> f) {
-        T newStub = MetadataUtils.attachHeaders(stub, metadata);
+        T newStub = metadata != null ? MetadataUtils.attachHeaders(stub, metadata) : stub;
         TaskManager<R> task = new TaskManager<>(FutureConverter.toCompletableFuture(f.apply(newStub)), config.getRetryOptions());
         return task.scheduleTask(0);
     }
@@ -176,33 +182,78 @@ public class InternalBot {
     }
 
     public CompletableFuture<Optional<OutPeer>> findOutPeer(Peer peer) {
-        String peerHash = PeerUtils.peerHasher(peer);
-
+        String peerHash = peer.hash();
         OutPeer outPeer = outPeerMap.get(peerHash);
-
         if (outPeer != null) {
             return CompletableFuture.completedFuture(Optional.of(outPeer));
         }
 
-        // Implicitly load outPeers of loaded dialogs
-        return loadDialogs(Sets.newHashSet(peer))
+        return setHashsetOutPeer(peer.toServerPeer())
                 .thenApply(x -> outPeerMap.containsKey(peerHash) ?
-                Optional.of(outPeerMap.get(peerHash)) : Optional.empty());
+                        Optional.of(outPeerMap.get(peerHash)) : Optional.empty());
+    }
+
+    private CompletableFuture<Void> setHashsetOutPeer(Peers.Peer peer) {
+        String peerHash = new Peer(peer).hash();
+        if (peer.getType() == PeerType.PEERTYPE_PRIVATE) {
+
+            UsersOuterClass.RequestLoadUserData.Claim claim = UsersOuterClass.RequestLoadUserData.Claim.newBuilder()
+                    .setUserPeer(peer)
+                    .setP2P(true)
+                    .build();
+
+
+            UsersOuterClass.RequestLoadUserData request = UsersOuterClass.RequestLoadUserData.newBuilder()
+                    .addClaims(claim)
+                    .addClaims(UsersOuterClass.RequestLoadUserData.Claim.newBuilder()
+                            .build())
+                    .build();
+
+            return withToken(UsersGrpc.newFutureStub(channel),
+                    stub -> stub.loadUserData(request))
+                    .thenAccept(res -> {
+                        res.getUsersList().forEach(u ->
+                        {
+                            outPeerMap.put(peerHash,
+                                    new Peer(u.getId(),
+                                            Peer.PeerType.PRIVATE,
+                                            u.getAccessHash()).toServerOutPeer());
+                        });
+                    });
+        } else {
+            outPeerMap.put(peerHash, new Peer(peer).toServerOutPeer());
+            return CompletableFuture.completedFuture(null);
+//            GroupOutPeer groupOutPeer = GroupOutPeer.newBuilder()
+//                    .setGroupId(peer.getId())
+//                    .setAccessHash(0)
+//                    .build();
+//            RequestGetReferencedEntitites request = RequestGetReferencedEntitites.newBuilder()
+//                    .addGroups(groupOutPeer)
+//                    .build();
+//
+//            return withToken(SequenceAndUpdatesGrpc.newFutureStub(channel),
+//                    stub -> stub.getReferencedEntitites(request))
+//                    .thenAccept(res -> res.getGroupsList()
+//                            .forEach(g -> outPeerMap.put(peerHash,
+//                                    new Peer(g.getId(),
+//                                            Peer.PeerType.GROUP,
+//                                            g.getAccessHash()).toServerOutPeer())));
+        }
     }
 
     public CompletableFuture<Optional<OutPeer>> loadSenderOutPeer(Integer senderId, OutPeer peer, long date) {
-        Peer senderPeer = PeerUtils.toUserPeer(senderId);
-        String peerHash = PeerUtils.peerHasher(senderPeer);
+        Peer senderPeer = new Peer(senderId, Peer.PeerType.PRIVATE, 0);
+        String peerHash = senderPeer.hash();
         return outPeerMap.containsKey(peerHash) ?
                 CompletableFuture.completedFuture(Optional.of(outPeerMap.get(peerHash))) :
-                // implicitly load outPeers of loaded dialogs
+
                 load(peer, date, 2).thenApply(x ->
                         outPeerMap.containsKey(peerHash) ? Optional.of(outPeerMap.get(peerHash)) : Optional.empty()
                 );
     }
 
     public CompletableFuture<Optional<OutPeer>> findUserOutPeer(int userId) {
-        return findOutPeer(PeerUtils.toUserPeer(userId));
+        return findOutPeer(new Peer(userId, Peer.PeerType.PRIVATE, 0));
     }
 
     public CompletableFuture<ResponseGetReferencedEntitites> getRefEntities(Collection<UserOutPeer> userOutPeers,
@@ -221,19 +272,12 @@ public class InternalBot {
                 stub -> stub.getReferencedEntitites(requestBuilder.build()));
     }
 
-    private void putOutPeer(OutPeer outPeer) {
-        outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), outPeer);
-    }
-
-    private void putOutPeer(UserOutPeer outPeer) {
-        outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), PeerUtils.toOutPeer(outPeer));
-    }
-
-    private void putOutPeer(GroupOutPeer outPeer) {
-        outPeerMap.put(PeerUtils.peerHasher(PeerUtils.toPeer(outPeer)), PeerUtils.toOutPeer(outPeer));
+    public void putOutPeer(Peer peer){
+        outPeerMap.put(peer.hash(), peer.toServerOutPeer());
     }
 
     public CompletableFuture<List<Message>> load(OutPeer peer, long from, Integer limit) {
+
         return withToken(
                 MessagingGrpc.newFutureStub(channel),
                 stub -> stub.loadHistory(MessagingOuterClass.RequestLoadHistory.newBuilder()
@@ -244,49 +288,39 @@ public class InternalBot {
                         .setPeer(peer)
                         .build())
         ).thenApply(res -> {
-            res.getGroupPeersList().forEach(this::putOutPeer);
-            res.getUserPeersList().forEach(this::putOutPeer);
+            res.getGroupPeersList().stream().map(Peer::new).forEach(this::putOutPeer);
+            res.getUserPeersList().stream().map(Peer::new).forEach(this::putOutPeer);
 
             List<HistoryMessage> historyList = res.getHistoryList();
             List<Message> messages = new ArrayList<>();
 
             for (HistoryMessage hm : historyList) {
-                putOutPeer(hm.getSenderPeer());
-
+                Peer senderPeer = new Peer(hm.getSenderPeer());
+                List<Peer> mentions = new ArrayList<>();
+                if (hm.getMessage().hasTextMessage())
+                    mentions.addAll(hm.getMessage().getTextMessage().getMentionsList().stream().map(m -> m.getPeer()).map(Peer::new).collect(Collectors.toList()));
                 messages.add(new Message(
-                        PeerUtils.toDomainPeer(peer),
-                        PeerUtils.toDomainPeer(hm.getSenderPeer()),
+                        new Peer(peer),
+                        senderPeer,
                         UUIDUtils.convert(hm.getMid()),
                         hm.getMessage().getTextMessage().getText(), hm.getDate(),
-                        Content.fromMessage(hm.getMessage())
-                ));
+                        Content.fromMessage(hm.getMessage()),
+                        hm.getForward().getMidsList().stream()
+                                .map(u -> UUIDUtils.convert(u))
+                                .collect(Collectors.toList()),
+                        mentions,
+                        hm.getReply().getMidsList().stream()
+                                .map(u -> UUIDUtils.convert(u))
+                                .collect(Collectors.toList())));
             }
 
             return messages;
         });
     }
 
-    CompletableFuture<List<Dialog>> loadDialogs(Set<Peer> peers) {
-        RequestLoadDialogs request = RequestLoadDialogs.newBuilder()
-                .setLimit(1)
-                .addAllPeersToLoad(peers)
-                .addAllOptimizations(Constants.OPTIMISATIONS)
-                .build();
-
-        return withToken(
-                MessagingGrpc.newFutureStub(channel),
-                stub -> stub.loadDialogs(request)
-        ).thenApply(res -> {
-            res.getGroupPeersList().forEach(this::putOutPeer);
-            res.getUserPeersList().forEach(this::putOutPeer);
-
-            return res.getDialogsList();
-        });
-    }
-
     public synchronized <T extends GeneratedMessageV3> void subscribeOn(Class<T> clazz, UpdateListener<T> listener) {
-         subscribers.computeIfAbsent(clazz, s -> new CopyOnWriteArrayList<>());
-         subscribers.get(clazz).add(listener);
+        subscribers.computeIfAbsent(clazz, s -> new CopyOnWriteArrayList<>());
+        subscribers.get(clazz).add(listener);
     }
 
     public int getCurrentSequence() {

@@ -1,13 +1,12 @@
 package im.dlg.botsdk.model.media;
 
+import lombok.Getter;
+
 public class AudioMedia {
-    private AudioLocation audioLocation;
+    @Getter
+    private final AudioLocation audioLocation;
 
     public AudioMedia(AudioLocation audioLocation) {
         this.audioLocation = audioLocation;
-    }
-
-    public AudioLocation getAudioLocation() {
-        return audioLocation;
     }
 }

@@ -1,57 +1,30 @@
 package im.dlg.botsdk.model;
 
+import im.dlg.botsdk.model.group.GroupData;
+import im.dlg.grpc.services.GroupsOuterClass;
+import lombok.Getter;
+
 public class Group {
-    private String shortname;
-    private String title;
-    private Peer peer;
-    private GroupType type;
+    @Getter
+    private final  String shortname;
+    @Getter
+    private final String title;
+    @Getter
+    private final Peer peer;
+    @Getter
+    private final GroupType type;
+    @Getter
+    private final GroupMember member;
+    @Getter
+    private final GroupData groupData;
 
-    public Group(String shortname, String title, Peer peer, GroupType type) {
-        this.shortname = shortname;
-        this.title = title;
-        this.peer = peer;
-        this.type = type;
-    }
+    public Group(GroupsOuterClass.Group serverGroup) {
+        shortname = serverGroup.getShortname().getValue();
+        title = serverGroup.getTitle();
+        peer = new Peer(serverGroup.getId(), Peer.PeerType.GROUP, serverGroup.getAccessHash());
+        type = GroupType.fromServer(serverGroup.getGroupType());
+        member = new GroupMember(serverGroup.getSelfMember());
+        groupData = new GroupData(serverGroup.getData());
 
-    /**
-     * @return The peer, related to group
-     */
-    public Peer getPeer() {
-        return peer;
-    }
-
-    /**
-     * @return The title of group
-     */
-    public String getTitle() {
-        return title;
-    }
-
-    /**
-     * @return Shortname
-     */
-    public String getShortname() {
-        return shortname;
-    }
-
-    /**
-     * @return About string info
-     */
-    public GroupType getType() {
-        return type;
-    }
-
-    /**
-     * @return user sex
-     */
-
-    @Override
-    public String toString() {
-        return "Group{" +
-                "peer=" + peer +
-                ", title='" + title + '\'' +
-                ", shortname='" + shortname + '\'' +
-                ", type='" + type +
-                '}';
     }
 }

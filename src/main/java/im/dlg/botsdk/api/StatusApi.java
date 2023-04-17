@@ -1,5 +1,15 @@
 package im.dlg.botsdk.api;
 
+import com.google.protobuf.Timestamp;
+import im.dlg.botsdk.listeners.MessageReadListener;
+import im.dlg.botsdk.listeners.online.UserOnlineStatusListener;
+import im.dlg.botsdk.listeners.typing.UserTypingStatusListener;
+import im.dlg.botsdk.model.MessageRead;
+import im.dlg.grpc.services.*;
+import im.dlg.grpc.services.PresenceOuterClass.*;
+import im.dlg.grpc.services.SequenceAndUpdatesOuterClass.WeakUpdateCommand;
+import io.grpc.ManagedChannel;
+import io.grpc.stub.StreamObserver;
 import im.dlg.botsdk.internal.InternalBot;
 import im.dlg.botsdk.model.DeviceType;
 import im.dlg.botsdk.model.Peer;
@@ -7,19 +17,11 @@ import im.dlg.botsdk.model.TypingType;
 import im.dlg.botsdk.status.StatusStream;
 import im.dlg.botsdk.status.StatusStreamListenerRegistry;
 import im.dlg.botsdk.status.StatusStreamObserver;
-import im.dlg.botsdk.utils.PeerUtils;
-import im.dlg.grpc.services.PresenceGrpc;
-import im.dlg.grpc.services.PresenceOuterClass.RequestSetOnline;
-import im.dlg.grpc.services.PresenceOuterClass.RequestStartTyping;
-import im.dlg.grpc.services.SequenceAndUpdatesGrpc;
-import im.dlg.grpc.services.SequenceAndUpdatesOuterClass.WeakUpdateCommand;
-import io.grpc.ManagedChannel;
-import io.grpc.stub.StreamObserver;
+import lombok.Setter;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-import static im.dlg.grpc.services.Peers.OutPeer;
 import static im.dlg.grpc.services.PresenceOuterClass.RequestStopTyping;
 
 public class StatusApi {
@@ -27,21 +29,36 @@ public class StatusApi {
     private final ManagedChannel channel;
     private final InternalBot internalBot;
     private StatusStream statusStream;
+    private UserOnlineStatusListener userOnlineStatusListener = null;
+    private UserTypingStatusListener userTypingStatusListener = null;
+    private MessageReadListener messageReadListener = null;
+
 
     public StatusApi(ManagedChannel channel, InternalBot internalBot) {
         this.channel = channel;
         this.internalBot = internalBot;
+         internalBot.subscribeOn(MessagingOuterClass.UpdateMessageRead.class, messageRead -> {
+             if (messageReadListener != null)
+                 messageReadListener.onMessageRead(new MessageRead(messageRead));
+         });
     }
 
-    public CompletableFuture<Void> setOnline(DeviceType deviceType, Duration timeout) {
-        return setOnlineStatus(true, deviceType, timeout);
+    /**
+     * Setter on message read listener
+     * @param messageReadListener listener
+     */
+    public void onMessageRead(MessageReadListener messageReadListener){
+        this.messageReadListener = messageReadListener;
     }
 
-    public CompletableFuture<Void> setOffline(DeviceType deviceType, Duration timeout) {
-        return setOnlineStatus(false, deviceType, timeout);
-    }
-
-    private CompletableFuture<Void> setOnlineStatus(boolean status, DeviceType deviceType, Duration timeout) {
+    /**
+     * Set user online
+     * @param status Online status
+     * @param deviceType Device type enum
+     * @param timeout    Timeout
+     * @return future
+     */
+    public CompletableFuture<Void> setOnlineStatus(boolean status, DeviceType deviceType, Duration timeout) {
         RequestSetOnline request = RequestSetOnline.newBuilder()
                 .setIsOnline(status)
                 .setDeviceType(deviceType.toGrpcType())
@@ -53,27 +70,54 @@ public class StatusApi {
                 stub -> stub.setOnline(request)).thenApply(t -> null);
     }
 
-    public CompletableFuture<Void> setTyping(Peer peer, TypingType typingType) {
-        OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
-
+    /**
+     * Set user typing
+     *
+     * @param peer       User peer
+     * @param typingType Typing type enum
+     * @return future
+     */
+    public CompletableFuture<Void> startTyping(Peer peer, TypingType typingType) {
         RequestStartTyping request = RequestStartTyping.newBuilder()
-                .setTypingType(typingType.toGrpcType())
-                .setPeer(outPeer)
+                .setTypingType(typingType.toServerType())
+                .setPeer(peer.toServerOutPeer())
                 .build();
 
         return internalBot.withToken(PresenceGrpc.newFutureStub(channel),
                 stub -> stub.startTyping(request)).thenApply(t -> null);
     }
 
-    public CompletableFuture<Void> stopTyping(Peer peer) {
-        OutPeer outPeer = PeerUtils.toServerOutPeer(peer);
-
+    /**
+     * Stop typing
+     *
+     * @param peer Peer
+     * @return future
+     */
+    public CompletableFuture<Void> stopTyping(Peer peer, TypingType typingType) {
         RequestStopTyping request = RequestStopTyping.newBuilder()
-                .setPeer(outPeer)
+                .setPeer(peer.toServerOutPeer())
+                .setTypingType(typingType.toServerType())
                 .build();
 
         return internalBot.withToken(PresenceGrpc.newFutureStub(channel),
                 stub -> stub.stopTyping(request)).thenApply(t -> null);
+    }
+
+    public CompletableFuture<Timestamp> getUserLastPresence(Peer peer){
+        RequestGetUserLastPresence request = RequestGetUserLastPresence.newBuilder()
+                .setUserOutPeer(peer.toServerUserOutPeer())
+                .build();
+
+        return internalBot.withToken(PresenceGrpc.newFutureStub(channel),
+                stub -> stub.getUserLastPresence(request)).thenApply(t -> t.getLastOnlineAt());
+    }
+
+    public void onUserOnline(UserOnlineStatusListener listener){
+        userOnlineStatusListener = listener;
+    }
+
+    public void setUserTypingStatusListener(UserTypingStatusListener listener){
+        userTypingStatusListener = listener;
     }
 
     public StatusStream openStream() {

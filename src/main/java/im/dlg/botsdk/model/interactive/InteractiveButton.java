@@ -1,28 +1,32 @@
 package im.dlg.botsdk.model.interactive;
 
+import com.google.protobuf.StringValue;
+import im.dlg.grpc.services.MessagingOuterClass;
+import lombok.Getter;
+
 /**
  * Button element
  */
 public class InteractiveButton implements InteractiveWidget {
-    private String value;
-    private String label;
+    @Getter
+    private final String value;
+    @Getter
+    private final String label;
 
     public InteractiveButton(String value, String label) {
         this.value = value;
         this.label = label;
     }
 
-    /**
-     * @return the value, text indication for element
-     */
-    public String getValue() {
-        return value;
-    }
+    public MessagingOuterClass.InteractiveMediaWidget toServer() {
+        InteractiveButton button = this;
+        MessagingOuterClass.InteractiveMediaButton.Builder btn = MessagingOuterClass.InteractiveMediaButton.newBuilder()
+                .setValue(button.getValue());
 
-    /**
-     * @return the text label on button
-     */
-    public String getLabel() {
-        return label;
+        if (button.getLabel() != null && !button.getLabel().isEmpty()) {
+            btn.setLabel(StringValue.of(button.getLabel()));
+        }
+
+        return MessagingOuterClass.InteractiveMediaWidget.newBuilder().setInteractiveMediaButton(btn).build();
     }
 }

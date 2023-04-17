@@ -1,15 +1,20 @@
 package im.dlg.botsdk.model.media;
 
-import java.util.List;
-
 import im.dlg.grpc.services.MessagingOuterClass;
 import im.dlg.botsdk.model.interactive.InteractiveGroup;
+import lombok.Getter;
+
+import java.util.List;
 
 public class MediaMessage {
-    private ImageMedia imageMedia;
-    private AudioMedia audioMedia;
-    private WebPageMedia webPageMedia;
-    private List<InteractiveGroup> actions;
+    @Getter
+    private final ImageMedia imageMedia;
+    @Getter
+    private final AudioMedia audioMedia;
+    @Getter
+    private final WebPageMedia webPageMedia;
+    @Getter
+    private final List<InteractiveGroup> actions;
 
     public MediaMessage(ImageMedia imageMedia,
                         AudioMedia audioMedia,
@@ -21,28 +26,13 @@ public class MediaMessage {
         this.actions = actions;
     }
 
-    public ImageMedia getImageMedia() {
-        return imageMedia;
-    }
-
-    public AudioMedia getAudioMedia() {
-        return audioMedia;
-    }
-
-    public WebPageMedia getWebPageMedia() {
-        return webPageMedia;
-    }
-
-    public List<InteractiveGroup> getActions() {
-        return actions;
-    }
-
-    public static MessagingOuterClass.MessageMedia buildMedia(MediaMessage media) {
+    protected MessagingOuterClass.MessageMedia toServer() {
+        MediaMessage media = this;
         MessagingOuterClass.MessageMedia.Builder msg = MessagingOuterClass.MessageMedia.newBuilder();
         if (media.getImageMedia() != null) {
             MessagingOuterClass.ImageMedia image = MessagingOuterClass.ImageMedia
                     .newBuilder()
-                    .setImage(ImageLocation.buildImageLocation(media.getImageMedia().getImageLocation()))
+                    .setImage(media.getImageMedia().getImageLocation().toServer())
                     .build();
             msg.setImage(image);
         }
@@ -50,13 +40,13 @@ public class MediaMessage {
         if (media.getAudioMedia() != null) {
             MessagingOuterClass.AudioMedia audio = MessagingOuterClass.AudioMedia
                     .newBuilder()
-                    .setAudio(AudioLocation.buildAudioLocation(media.getAudioMedia().getAudioLocation()))
+                    .setAudio(media.getAudioMedia().getAudioLocation().toServer())
                     .build();
             msg.setAudio(audio);
         }
 
         if (media.getWebPageMedia() != null) {
-            MessagingOuterClass.WebpageMedia webpage = WebPageMedia.buildWebpage(media.getWebPageMedia());
+            MessagingOuterClass.WebpageMedia webpage = media.getWebPageMedia().toServer();
             msg.setWebpage(webpage);
         }
 

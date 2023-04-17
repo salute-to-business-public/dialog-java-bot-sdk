@@ -1,14 +1,18 @@
 package im.dlg.botsdk.model.media;
 
 import com.google.protobuf.StringValue;
-
 import im.dlg.grpc.services.MessagingOuterClass;
+import lombok.Getter;
 
 public class WebPageMedia {
-    private String url;
-    private String title;
-    private String description;
-    private ImageLocation image;
+    @Getter
+    private final String url;
+    @Getter
+    private final String title;
+    @Getter
+    private final String description;
+    @Getter
+    private final ImageLocation image;
 
     public WebPageMedia(String url, String title, String description, ImageLocation image) {
         this.url = url;
@@ -17,23 +21,8 @@ public class WebPageMedia {
         this.image = image;
     }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public ImageLocation getImage() {
-        return image;
-    }
-
-    public static MessagingOuterClass.WebpageMedia buildWebpage(WebPageMedia webPageMedia) {
+    protected MessagingOuterClass.WebpageMedia toServer() {
+        WebPageMedia webPageMedia = this;
         return MessagingOuterClass.WebpageMedia
                 .newBuilder()
                 .setUrl(StringValue.of(webPageMedia.getUrl()))

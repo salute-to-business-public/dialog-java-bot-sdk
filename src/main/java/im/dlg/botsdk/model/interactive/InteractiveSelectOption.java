@@ -1,28 +1,18 @@
 package im.dlg.botsdk.model.interactive;
 
+import lombok.Getter;
+
 /**
  * Option item for selection menu
  */
 public class InteractiveSelectOption {
-    private String value;
-    private String label;
+    @Getter
+    private final String value;
+    @Getter
+    private final String label;
 
     public InteractiveSelectOption(String value, String label) {
         this.value = value;
         this.label = label;
-    }
-
-    /**
-     * @return option label
-     */
-    public String getValue() {
-        return value;
-    }
-
-    /**
-     * @return text label
-     */
-    public String getLabel() {
-        return label;
     }
 }

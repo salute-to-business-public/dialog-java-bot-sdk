@@ -1,7 +1,6 @@
 package im.dlg.botsdk.utils;
 
 import im.dlg.grpc.services.MessagingOuterClass;
-import im.dlg.botsdk.model.content.Content;
 import im.dlg.botsdk.model.Message;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,12 +19,15 @@ public class MsgUtils {
         }
     }
 
+    /**
+     * Convert server history message to message
+     *
+     * @param hm Server history message
+     * @return Message
+     * @deprecated Use constructor {@link Message#Message(MessagingOuterClass.HistoryMessage)} instead
+     */
+    @Deprecated
     public static Message toMessage(MessagingOuterClass.HistoryMessage hm) {
-        return new Message(
-                PeerUtils.toDomainPeer(hm.getSenderPeer()),
-                PeerUtils.toDomainPeer(hm.getSenderPeer()),
-                UUIDUtils.convert(hm.getMid()),
-                hm.getMessage().getTextMessage().getText(), hm.getDate(),
-                Content.fromMessage(hm.getMessage()));
+        return new Message(hm);
     }
 }

@@ -1,12 +1,17 @@
 package im.dlg.botsdk.model.media;
 
 import im.dlg.grpc.services.MediaAndFilesOuterClass;
+import lombok.Getter;
 
 public class AudioLocation {
-    private FileLocation fileLocation;
-    private int duration;
-    private String mimeType;
-    private int fileSize;
+    @Getter
+    private final FileLocation fileLocation;
+    @Getter
+    private final int duration;
+    @Getter
+    private final String mimeType;
+    @Getter
+    private final int fileSize;
 
     public AudioLocation(FileLocation fileLocation, int duration, String mimeType, int fileSize) {
         this.fileLocation = fileLocation;
@@ -15,31 +20,13 @@ public class AudioLocation {
         this.fileSize = fileSize;
     }
 
-    public FileLocation getFileLocation() {
-        return fileLocation;
-    }
-
-    public int getDuration() {
-        return duration;
-    }
-
-    public String getMimeType() {
-        return mimeType;
-    }
-
-    public int getFileSize() {
-        return fileSize;
-    }
-
-    public static MediaAndFilesOuterClass.AudioLocation buildAudioLocation(AudioLocation audioLocation) {
+    protected MediaAndFilesOuterClass.AudioLocation toServer(){
         return MediaAndFilesOuterClass.AudioLocation
                 .newBuilder()
-                .setDuration(audioLocation.getDuration())
-                .setMimeType(audioLocation.getMimeType())
-                .setFileSize(audioLocation.getFileSize())
-                .setFileLocation(FileLocation.buildFileLocation(
-                        new FileLocation(audioLocation.getFileLocation().getFileId(),
-                                audioLocation.getFileLocation().getAccessHash())))
+                .setDuration(this.duration)
+                .setMimeType(this.mimeType)
+                .setFileSize(this.fileSize)
+                .setFileLocation(fileLocation.toServer())
                 .build();
     }
 }

@@ -1,12 +1,18 @@
 package im.dlg.botsdk.model.interactive;
 
-import java.util.ArrayList;
+import com.google.protobuf.StringValue;
+import im.dlg.grpc.services.MessagingOuterClass;
+import lombok.Getter;
+
 import java.util.List;
 
 public class InteractiveGroup {
-    private String title;
-    private String description;
-    private List<InteractiveAction> actions = new ArrayList<>();
+    @Getter
+    private final String title;
+    @Getter
+    private final String description;
+    @Getter
+    private final List<InteractiveAction> actions;
 
     public InteractiveGroup(String title, String description, List<InteractiveAction> actions) {
         this.title = title;
@@ -18,16 +24,31 @@ public class InteractiveGroup {
         this(null, null, actions);
     }
 
+    public MessagingOuterClass.InteractiveMediaGroup toServer() {
+        InteractiveGroup group = this;
+        MessagingOuterClass.InteractiveMediaGroup.Builder apiMediaGroup = MessagingOuterClass.InteractiveMediaGroup.newBuilder();
 
-    public String getTitle() {
-        return title;
-    }
+        if (group.getTitle() != null && !group.getTitle().isEmpty()) {
+            apiMediaGroup.setTitle(StringValue.of(group.getTitle()));
+        }
 
-    public String getDescription() {
-        return description;
-    }
+        if (group.getDescription() != null && !group.getDescription().isEmpty()) {
+            apiMediaGroup.setDescription(StringValue.of(group.getDescription()));
+        }
 
-    public List<InteractiveAction> getActions() {
-        return actions;
+        for (InteractiveAction action : group.getActions()) {
+            MessagingOuterClass.InteractiveMedia.Builder apiMedia = MessagingOuterClass.InteractiveMedia.newBuilder()
+                    .setId(action.getId())
+                    .setStyle(action.getStyle().toServer());
+
+            InteractiveWidget widget = action.getWidget();
+            apiMedia.setWidget(widget.toServer());
+            if (action.getConfirm() != null) {
+                apiMedia.setConfirm(action.getConfirm().toServer());
+            }
+
+            apiMediaGroup.addActions(apiMedia);
+        }
+        return apiMediaGroup.build();
     }
 }

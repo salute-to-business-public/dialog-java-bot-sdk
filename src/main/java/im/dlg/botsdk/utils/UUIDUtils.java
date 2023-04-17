@@ -2,8 +2,6 @@ package im.dlg.botsdk.utils;
 
 import im.dlg.grpc.services.Definitions;
 
-import java.util.Calendar;
-import java.util.TimeZone;
 import java.util.UUID;
 
 public class UUIDUtils {

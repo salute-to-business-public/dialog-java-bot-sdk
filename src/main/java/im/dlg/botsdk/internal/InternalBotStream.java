@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static im.dlg.grpc.services.SequenceAndUpdatesOuterClass.*;
-import static im.dlg.botsdk.internal.InternalBot.RECONNECT_DELAY;
+import static im.dlg.grpc.services.SequenceAndUpdatesOuterClass.SeqUpdateBox;
+import static im.dlg.grpc.services.SequenceAndUpdatesOuterClass.UpdateSeqUpdate;
 
 public class InternalBotStream implements StreamObserver<SeqUpdateBox> {
 
@@ -45,16 +45,18 @@ public class InternalBotStream implements StreamObserver<SeqUpdateBox> {
 
     @Override
     public void onError(Throwable t) {
-        LOGGER.error("onError", t);
-
+        if (!t.getMessage().contains("Received Rst Stream"))
+            LOGGER.error("onError", t);
         // TODO: Remove sleep.
         try {
-            Thread.sleep(RECONNECT_DELAY);
+            Thread.sleep(InternalBot.RECONNECT_DELAY);
+
         } catch (InterruptedException e) {
             LOGGER.error("onError.sleep", e);
         }
 
         internalBot.reconnect();
+        internalBot.getDifference(currentSequence.get());
     }
 
     @Override
@@ -63,7 +65,7 @@ public class InternalBotStream implements StreamObserver<SeqUpdateBox> {
 
         // TODO: Remove sleep.
         try {
-            Thread.sleep(RECONNECT_DELAY);
+            Thread.sleep(InternalBot.RECONNECT_DELAY);
         } catch (InterruptedException e) {
             LOGGER.error("onCompleted.sleep", e);
         }

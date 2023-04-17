@@ -1,13 +1,12 @@
 package im.dlg.botsdk.model.media;
 
+import lombok.Getter;
+
 public class ImageMedia {
-    private ImageLocation imageLocation;
+    @Getter
+    private final ImageLocation imageLocation;
 
     public ImageMedia(ImageLocation imageLocation) {
         this.imageLocation = imageLocation;
-    }
-
-    public ImageLocation getImageLocation() {
-        return imageLocation;
     }
 }

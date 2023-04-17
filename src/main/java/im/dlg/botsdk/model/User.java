@@ -1,31 +1,57 @@
 package im.dlg.botsdk.model;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import im.dlg.grpc.services.UsersOuterClass;
+import lombok.Getter;
 
 public class User {
 
-    public enum Sex {
-        MALE,
-        FEMALE;
+    @Getter
+    private final Peer peer;
+    @Getter
+    private final String name;
+    @Getter
+    private final String nick;
+    @Getter
+    private final String about;
+    @Getter
+    private final Sex sex;
+    @Getter
+    private final String language;
+    @Getter
+    private final String timeZone;
+    @Getter
+    private final String customProfile;
+    @Getter
+    private final CustomerProfile customerProfileEntity;
+    @Getter
+    private final UserAvatar userAvatar;
+    @Getter
+    private final boolean isBot;
 
-        public static Sex fromServerModel(UsersOuterClass.Sex sex) {
-            return sex.getNumber() == 3 ? MALE : FEMALE;
-        }
+
+    private User(Builder builder) {
+        peer = builder.peer;
+        name = builder.name;
+        nick = builder.nick;
+        about = builder.about;
+        sex = builder.sex;
+        language = builder.language;
+        timeZone = builder.timeZone;
+        customProfile = builder.customProfileJson;
+        customerProfileEntity = builder.customerProfile;
+        this.userAvatar = builder.userAvatar;
+        isBot = builder.isBot;
     }
 
-    private Peer peer;
-    private String name;
-    private String nick;
-    private String about;
-    private Sex sex;
-    private String language;
-    private String timeZone;
-    private String customProfile;
 
+    @Deprecated
     public User(Peer peer, String name, String nick, Sex sex, String about, String language, String timeZone) {
         this(peer, name, nick, sex, about, language, timeZone, null);
     }
 
+    @Deprecated
     public User(Peer peer, String name, String nick, Sex sex, String about, String language, String timeZone, String customProfile) {
         this.peer = peer;
         this.name = name;
@@ -34,75 +60,119 @@ public class User {
         this.sex = sex;
         this.language = language;
         this.timeZone = timeZone;
+        Gson gson = new Gson();
+        CustomerProfile customerEntity = gson.fromJson(customProfile, CustomerProfile.class);
         this.customProfile = customProfile;
+        customerProfileEntity = customerEntity;
+        userAvatar = null;
+        isBot = false;
     }
 
-    /**
-     * @return The peer, related to user
-     */
-    public Peer getPeer() {
-        return peer;
+    public CustomerProfile getCustomerProfileEntity() {
+        return customerProfileEntity;
     }
 
-    /**
-     * @return The name of user
-     */
-    public String getName() {
-        return name;
+    public boolean isBot() {
+        return isBot;
     }
 
-    /**
-     * @return Nickname
-     */
-    public String getNick() {
-        return nick;
+    public enum Sex {
+        MALE,
+        FEMALE;
+
+        public static Sex fromServerModel(UsersOuterClass.Sex sex) {
+            return sex.getNumber() == 3 ? MALE : FEMALE;
+        }
+
+        public UsersOuterClass.Sex toServer() {
+            switch (this) {
+                case MALE:
+                    return UsersOuterClass.Sex.SEX_MALE;
+                case FEMALE:
+                    return UsersOuterClass.Sex.SEX_FEMALE;
+                default:
+                    return UsersOuterClass.Sex.UNRECOGNIZED;
+            }
+        }
     }
 
-    /**
-     * @return About string info
-     */
-    public String getAbout() {
-        return about;
-    }
+    public static final class Builder {
+        private Peer peer;
+        private String name;
+        private String nick;
+        private String about;
+        private Sex sex;
+        private String language;
+        private String timeZone;
+        private String customProfileJson;
+        private CustomerProfile customerProfile;
+        private UserAvatar userAvatar;
+        private Boolean isBot;
 
-    /**
-     * @return user sex
-     */
-    public Sex getSex() {
-        return sex;
-    }
+        public Builder() {
+        }
 
-    /**
-     * @return user lang
-     */
-    public String getLanguage() {
-        return language;
-    }
+        public Builder peer(Peer val) {
+            peer = val;
+            return this;
+        }
 
-    /**
-     * @return user timezone
-     */
-    public String getTimeZone() {
-        return timeZone;
-    }
+        public Builder name(String val) {
+            name = val;
+            return this;
+        }
 
-    /**
-     * @return Json string of custom profile
-     */
-    public String getCustomProfile() {
-        return customProfile;
-    }
+        public Builder nick(String val) {
+            nick = val;
+            return this;
+        }
 
-    @Override
-    public String toString() {
-        return "User{" +
-                "peer=" + peer +
-                ", name='" + name + '\'' +
-                ", nick='" + nick + '\'' +
-                ", about='" + about + '\'' +
-                ", sex=" + sex +
-                ", language='" + language + '\'' +
-                ", timeZone='" + timeZone + '\'' +
-                '}';
+        public Builder about(String val) {
+            about = val;
+            return this;
+        }
+
+        public Builder sex(Sex val) {
+            sex = val;
+            return this;
+        }
+
+        public Builder language(String val) {
+            language = val;
+            return this;
+        }
+
+        public Builder timeZone(String val) {
+            timeZone = val;
+            return this;
+        }
+
+        public Builder userAvatar(UserAvatar val) {
+            userAvatar = val;
+            return this;
+        }
+
+        public Builder isBot(Boolean val){
+            isBot = val;
+            return this;
+        }
+
+        public Builder customProfileJson(String val) {
+            customProfileJson = val;
+
+            try {
+                Gson gson = new Gson();
+                customerProfile = gson.fromJson(val, CustomerProfile.class);
+
+            } catch (JsonSyntaxException e) {
+                e.printStackTrace();
+            }
+
+            return this;
+        }
+
+        public User build() {
+            return new User(this);
+        }
     }
 }
